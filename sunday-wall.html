@@ -1,0 +1,910 @@
+<title>Sunday Wall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* ---------- tokens: light is the base, dark redefines ---------- */
+:root{
+  --ground:#e9edf0; --panel:#ffffff; --panel-2:#f2f5f7; --sunk:#dfe5ea;
+  --line:#ccd5dc; --line-soft:#e2e8ed;
+  --ink:#141c23; --ink-2:#3b4a56; --muted:#667885;
+  --accent:#ffcc00;            /* first-down line */
+  --accent-ink:#8a6b00;        /* readable yellow on light */
+  --accent-glow:rgba(255,204,0,.28);
+  --scrim:#1f66c4;             /* line of scrimmage */
+  --rz:#cf2222;
+  --live:#1f9d57;
+  --shadow:0 1px 2px rgba(16,28,38,.10), 0 8px 24px rgba(16,28,38,.08);
+  --screen-bg:#0a0e11;         /* glass is dark in every theme */
+  --screen-line:#28323b;
+  --screen-ink:#e9eef2;
+  --screen-muted:#7b8b98;
+  --screen-empty:#151c22;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0b0f12; --panel:#141a20; --panel-2:#1a222a; --sunk:#0e1317;
+    --line:#28323b; --line-soft:#1f272e;
+    --ink:#e9eef2; --ink-2:#bac6d0; --muted:#8395a2;
+    --accent:#ffcc00; --accent-ink:#ffcc00; --accent-glow:rgba(255,204,0,.18);
+    --scrim:#4f95e8; --rz:#e5453c; --live:#3ac07a;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b0f12; --panel:#141a20; --panel-2:#1a222a; --sunk:#0e1317;
+  --line:#28323b; --line-soft:#1f272e;
+  --ink:#e9eef2; --ink-2:#bac6d0; --muted:#8395a2;
+  --accent:#ffcc00; --accent-ink:#ffcc00; --accent-glow:rgba(255,204,0,.18);
+  --scrim:#4f95e8; --rz:#e5453c; --live:#3ac07a;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.4);
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0; font-family:"Barlow Condensed","Barlow Semi Condensed",system-ui,sans-serif; text-wrap:balance}
+button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important; transition-duration:.01ms !important}}
+
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--muted);
+}
+
+/* ---------- command bar ---------- */
+.bar{
+  position:sticky; top:0; z-index:40;
+  background:color-mix(in srgb, var(--panel) 92%, transparent);
+  backdrop-filter:saturate(1.4) blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.bar-in{
+  max-width:1400px; margin:0 auto; padding:10px 20px;
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.mark{display:flex; align-items:baseline; gap:9px; margin-right:auto}
+.mark h1{
+  font-size:23px; font-weight:700; letter-spacing:.055em; text-transform:uppercase;
+  line-height:1; color:var(--ink);
+}
+.mark h1 b{color:var(--accent-ink); font-weight:700}
+.mark .season{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.14em;
+  color:var(--muted); text-transform:uppercase; padding-bottom:1px;
+}
+
+.wk{display:flex; align-items:center; gap:2px; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:3px}
+.wk button.step{
+  width:28px; height:30px; border-radius:5px; color:var(--muted);
+  display:grid; place-items:center; font-size:16px; line-height:1;
+}
+.wk button.step:hover:not(:disabled){background:var(--sunk); color:var(--ink)}
+.wk button.step:disabled{opacity:.3; cursor:default}
+.wk select{
+  appearance:none; background:transparent; border:0; color:var(--ink);
+  font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:17px;
+  letter-spacing:.03em; text-transform:uppercase; padding:0 8px; height:30px;
+  cursor:pointer; text-align:center; min-width:148px;
+}
+.wk select option{background:var(--panel); color:var(--ink)}
+
+.seg{display:flex; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:3px; gap:3px}
+.seg button{
+  padding:5px 13px; border-radius:5px; color:var(--muted);
+  font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:15px;
+  letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;
+  transition:background .12s, color .12s;
+}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--accent); color:#191400; box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+
+.sync{
+  display:flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace;
+  font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+}
+.sync i{width:6px; height:6px; border-radius:50%; background:var(--live); display:block; flex:none}
+.sync[data-state="local"] i{background:var(--muted)}
+.sync[data-state="saving"] i{background:var(--accent)}
+
+/* ---------- page ---------- */
+.page{
+  max-width:1400px; margin:0 auto; padding-block:22px 44px; padding-left:20px; padding-right:20px;
+  display:grid; grid-template-columns:minmax(0,1fr) 372px; gap:26px; align-items:start;
+}
+@media (max-width:1040px){ .page{grid-template-columns:minmax(0,1fr); gap:22px} }
+
+/* ---------- armed banner ---------- */
+.armed{
+  display:none; position:sticky; top:57px; z-index:30; margin-bottom:14px;
+  align-items:center; gap:10px; padding:9px 12px; border-radius:9px;
+  background:var(--accent); color:#191400; box-shadow:var(--shadow);
+  font-weight:600; font-size:14px;
+}
+.armed.on{display:flex}
+.armed .x{margin-left:auto; font-weight:700; padding:2px 8px; border-radius:5px; background:rgba(0,0,0,.12)}
+.armed .x:hover{background:rgba(0,0,0,.22)}
+
+/* ---------- the wall ---------- */
+.wall{position:relative; display:flex; flex-direction:column; align-items:center; gap:16px}
+.wall::before{ /* mount spine */
+  content:""; position:absolute; top:30px; bottom:30px; left:50%; width:5px; margin-left:-2.5px;
+  background:var(--line-soft); border-radius:3px; z-index:0;
+}
+.tv{position:relative; z-index:1; width:var(--w); max-width:100%}
+.tv[data-size="65"]{--w:min(100%,760px)}
+.tv[data-size="40"]{--w:min(100%,468px)}   /* 40" is 61.5% the width of a 65" — true to scale */
+
+.tv-head{
+  display:flex; align-items:center; gap:10px; margin-bottom:6px; padding:0 2px;
+}
+.tv-name{
+  font-family:"Barlow Condensed",sans-serif; font-weight:700; font-size:14px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-2);
+}
+.tv-name em{font-style:normal; color:var(--muted); font-weight:600}
+.tv-head .seg{margin-left:auto; padding:2px; border-radius:7px}
+.tv-head .seg button{padding:3px 9px; font-size:12.5px; letter-spacing:.07em}
+.locked{
+  margin-left:auto; display:flex; align-items:center; gap:5px;
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted);
+  border:1px solid var(--line); border-radius:6px; padding:3px 8px;
+}
+
+.screen{
+  aspect-ratio:16/9; background:var(--screen-bg); border-radius:7px;
+  border:1px solid var(--screen-line);
+  box-shadow:0 0 0 4px color-mix(in srgb, var(--screen-bg) 82%, var(--line)), var(--shadow);
+  padding:5px; display:grid; gap:5px; overflow:hidden;
+}
+.screen[data-layout="single"]{grid-template-columns:1fr}
+.screen[data-layout="split"]{grid-template-columns:1fr 1fr}
+.screen[data-layout="quad"]{grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr}
+
+/* ---------- a slot ---------- */
+.slot{
+  position:relative; container-type:inline-size; border-radius:4px; overflow:hidden;
+  min-width:0; min-height:0; display:flex; flex-direction:column;
+  background:var(--screen-empty); color:var(--screen-ink);
+  border:1px dashed color-mix(in srgb, var(--screen-line) 100%, transparent);
+  transition:border-color .12s, background .12s, box-shadow .12s;
+  cursor:pointer; user-select:none;
+}
+.slot.filled{border-style:solid; border-color:transparent; background:#10161b}
+.slot.over{border-color:var(--accent); box-shadow:inset 0 0 0 2px var(--accent), 0 0 18px var(--accent-glow)}
+.slot.armable:not(.filled){border-color:color-mix(in srgb, var(--accent) 55%, transparent)}
+.slot:focus-visible{outline:2px solid var(--accent); outline-offset:-3px}
+.slot.dragging{opacity:.35}
+
+.slot-empty{
+  margin:auto; display:flex; flex-direction:column; align-items:center; gap:3px;
+  color:var(--screen-muted); text-align:center; padding:4px;
+}
+.slot-empty .plus{font-size:clamp(14px,7cqw,22px); line-height:1; color:color-mix(in srgb,var(--screen-muted) 70%, transparent)}
+.slot-empty .id{
+  font-family:"IBM Plex Mono",monospace; font-size:clamp(7px,3.1cqw,10px);
+  letter-spacing:.16em; text-transform:uppercase;
+}
+
+.matchup{flex:1; display:flex; min-height:0}
+.side{
+  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1px; padding:2px; background:
+    linear-gradient(160deg, color-mix(in srgb, var(--tc) 38%, transparent), color-mix(in srgb, var(--tc) 12%, transparent));
+}
+.side .abbr{
+  font-family:"Barlow Condensed",sans-serif; font-weight:700; line-height:.94;
+  font-size:clamp(15px,15.5cqw,46px); letter-spacing:.01em;
+  color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.65);
+}
+.side .role{
+  font-family:"IBM Plex Mono",monospace; font-size:clamp(6px,2.6cqw,9px);
+  letter-spacing:.14em; color:rgba(255,255,255,.62);
+}
+.at{
+  align-self:center; padding:0 1px; font-family:"Barlow Condensed",sans-serif;
+  font-size:clamp(8px,3.6cqw,13px); font-weight:600; color:var(--screen-muted);
+  background:var(--screen-bg); border-radius:2px; z-index:1;
+}
+.slot-foot{
+  display:flex; align-items:center; gap:6px; padding:2px 5px;
+  background:rgba(0,0,0,.55); border-top:1px solid rgba(255,255,255,.07);
+  font-family:"IBM Plex Mono",monospace; font-size:clamp(6.5px,3cqw,10px);
+  letter-spacing:.06em; color:var(--screen-muted); white-space:nowrap; overflow:hidden;
+}
+.slot-foot .net{color:var(--screen-ink); font-weight:500}
+.slot-foot .tm{margin-left:auto}
+
+.slot.rz{background:linear-gradient(150deg,#8f1414,#d92b2b 55%,#8f1414); border-color:transparent}
+.slot.rz .rz-in{
+  margin:auto; text-align:center; display:flex; flex-direction:column; gap:2px; padding:4px;
+}
+.slot.rz .rz-t{
+  font-family:"Barlow Condensed",sans-serif; font-weight:700; line-height:.94;
+  font-size:clamp(13px,11cqw,40px); letter-spacing:.02em; color:#fff;
+  text-shadow:0 1px 4px rgba(0,0,0,.5);
+}
+.slot.rz .rz-s{
+  font-family:"IBM Plex Mono",monospace; font-size:clamp(6px,2.7cqw,10px);
+  letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.8);
+}
+.slot-x{
+  position:absolute; top:2px; right:2px; z-index:3; width:clamp(14px,7cqw,22px); height:clamp(14px,7cqw,22px);
+  border-radius:3px; display:grid; place-items:center; line-height:1;
+  font-size:clamp(10px,5cqw,15px); color:#fff; background:rgba(0,0,0,.45); opacity:0;
+  transition:opacity .12s;
+}
+.slot:hover .slot-x, .slot:focus-within .slot-x{opacity:1}
+.slot-x:hover{background:rgba(0,0,0,.8)}
+
+/* ---------- wall footer ---------- */
+.wall-foot{
+  margin-top:18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding-top:14px; border-top:1px solid var(--line-soft);
+}
+.tally{
+  display:flex; align-items:baseline; gap:7px;
+  font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:17px;
+  letter-spacing:.05em; text-transform:uppercase; color:var(--ink-2);
+}
+.tally b{font-size:23px; color:var(--ink); font-weight:700}
+.wall-foot .acts{margin-left:auto; display:flex; gap:8px}
+.btn{
+  border:1px solid var(--line); background:var(--panel); border-radius:7px;
+  padding:6px 13px; font-family:"Barlow Condensed",sans-serif; font-weight:600;
+  font-size:14.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-2);
+  transition:border-color .12s, color .12s, background .12s;
+}
+.btn:hover{border-color:var(--muted); color:var(--ink)}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:#191400}
+.btn.primary:hover{filter:brightness(1.06)}
+
+/* ---------- the rack ---------- */
+.rack{
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  box-shadow:var(--shadow); overflow:hidden; position:sticky; top:76px;
+}
+@media (max-width:1040px){ .rack{position:static} }
+.rack-head{padding:13px 15px 11px; border-bottom:1px solid var(--line-soft)}
+.rack-head h2{
+  font-size:20px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; line-height:1.1;
+}
+.rack-head .sub{margin-top:3px; display:flex; gap:10px; align-items:baseline}
+.rack-body{
+  padding:11px; display:flex; flex-direction:column; gap:7px;
+  max-height:min(72vh,760px); overflow-y:auto; overscroll-behavior:contain;
+}
+@media (max-width:1040px){ .rack-body{max-height:none} }
+.rack-body.over{background:color-mix(in srgb, var(--accent) 9%, transparent)}
+
+.chip{
+  display:flex; align-items:stretch; gap:0; border:1px solid var(--line);
+  border-radius:8px; background:var(--panel-2); overflow:hidden; cursor:grab;
+  transition:border-color .12s, transform .08s, opacity .12s, box-shadow .12s;
+}
+.chip:hover{border-color:var(--muted)}
+.chip:active{cursor:grabbing}
+.chip.dragging{opacity:.4}
+.chip.armed{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-glow)}
+.chip.placed{opacity:.5}
+.chip.placed:hover{opacity:.78}
+.chip-bars{width:5px; flex:none; display:flex; flex-direction:column}
+.chip-bars span{flex:1; background:var(--bc)}
+.chip-main{flex:1; min-width:0; padding:7px 10px; display:flex; flex-direction:column; gap:1px}
+.chip-teams{
+  font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:17.5px;
+  letter-spacing:.02em; line-height:1.05; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.chip-teams .vs{color:var(--muted); font-weight:500; padding:0 1px}
+.chip-meta{
+  display:flex; gap:7px; align-items:center; font-family:"IBM Plex Mono",monospace;
+  font-size:10px; letter-spacing:.05em; color:var(--muted); white-space:nowrap;
+}
+.chip-meta .net{
+  color:var(--ink-2); border:1px solid var(--line); border-radius:3px;
+  padding:0 4px; font-size:9px; letter-spacing:.08em;
+}
+.chip-where{
+  flex:none; display:grid; place-items:center; padding:0 9px;
+  border-left:1px solid var(--line); background:var(--sunk);
+  font-family:"IBM Plex Mono",monospace; font-size:9px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink);
+  text-align:center; line-height:1.25; max-width:74px;
+}
+
+.chip.rz{background:linear-gradient(100deg, color-mix(in srgb,var(--rz) 20%, var(--panel-2)), var(--panel-2) 62%); border-color:color-mix(in srgb,var(--rz) 45%, var(--line))}
+.chip.rz .chip-teams{color:var(--rz)}
+.chip.rz .chip-bars span{background:var(--rz)}
+
+.rack-sec{
+  display:flex; align-items:center; gap:8px; margin-top:5px; padding:0 2px;
+}
+.rack-sec:first-child{margin-top:0}
+.rack-sec::after{content:""; flex:1; height:1px; background:var(--line-soft)}
+.note{
+  margin:2px 0 0; padding:9px 11px; border-radius:8px; font-size:12.5px; line-height:1.5;
+  background:var(--panel-2); border:1px solid var(--line); color:var(--muted);
+}
+.note b{color:var(--ink-2); font-weight:600}
+.rack-foot{
+  padding:10px 15px 13px; border-top:1px solid var(--line-soft); background:var(--panel-2);
+  font-size:11.5px; line-height:1.5; color:var(--muted);
+}
+.rack-foot b{color:var(--ink-2); font-weight:600}
+.empty-rack{padding:26px 12px; text-align:center; color:var(--muted); font-size:13px}
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="mark">
+      <h1>Sunday <b>Wall</b></h1>
+      <span class="season">NFL 2026 &middot; Sunday Ticket</span>
+    </div>
+
+    <div class="wk">
+      <button class="step" id="wkPrev" type="button" aria-label="Previous week">&#8249;</button>
+      <select id="wkSel" aria-label="Week"></select>
+      <button class="step" id="wkNext" type="button" aria-label="Next week">&#8250;</button>
+    </div>
+
+    <div class="seg" role="group" aria-label="Kickoff window">
+      <button type="button" id="slateEarly" data-slate="early" aria-pressed="true">1:00 ET</button>
+      <button type="button" id="slateLate" data-slate="late" aria-pressed="false">4:00 ET</button>
+    </div>
+
+    <div class="sync" id="sync" data-state="local"><i></i><span id="syncTxt">Saved on this device</span></div>
+  </div>
+</header>
+
+<main class="page">
+  <section aria-label="TV wall">
+    <div class="armed" id="armed">
+      <span id="armedTxt">Pick a screen</span>
+      <button class="x" type="button" id="armedX">Cancel</button>
+    </div>
+
+    <div class="wall" id="wall">
+      <article class="tv" data-size="40" data-tv="top">
+        <div class="tv-head">
+          <span class="tv-name">Top <em>&middot; 40&Prime;</em></span>
+          <div class="seg" role="group" aria-label="Top TV layout">
+            <button type="button" data-mode="single" data-for="top" aria-pressed="true">1 up</button>
+            <button type="button" data-mode="split" data-for="top" aria-pressed="false">2 up</button>
+          </div>
+        </div>
+        <div class="screen" id="screen-top" data-layout="single"></div>
+      </article>
+
+      <article class="tv" data-size="65" data-tv="main">
+        <div class="tv-head">
+          <span class="tv-name">Main <em>&middot; 65&Prime;</em></span>
+          <span class="locked">Quad box &middot; locked</span>
+        </div>
+        <div class="screen" id="screen-main" data-layout="quad"></div>
+      </article>
+
+      <article class="tv" data-size="40" data-tv="bot">
+        <div class="tv-head">
+          <span class="tv-name">Bottom <em>&middot; 40&Prime;</em></span>
+          <div class="seg" role="group" aria-label="Bottom TV layout">
+            <button type="button" data-mode="single" data-for="bot" aria-pressed="true">1 up</button>
+            <button type="button" data-mode="split" data-for="bot" aria-pressed="false">2 up</button>
+          </div>
+        </div>
+        <div class="screen" id="screen-bot" data-layout="single"></div>
+      </article>
+    </div>
+
+    <div class="wall-foot">
+      <div class="tally"><b id="tallyOn">0</b> <span>of</span> <b id="tallyCap">6</b> <span>screens live</span></div>
+      <div class="acts">
+        <button class="btn" type="button" id="btnClear">Clear wall</button>
+        <button class="btn primary" type="button" id="btnFill">Auto&#8209;fill</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="rack" aria-label="Game rack">
+    <div class="rack-head">
+      <h2 id="rackTitle">1:00 ET Slate</h2>
+      <div class="sub">
+        <span class="eyebrow" id="rackDate">Week 1 &middot; Sep 13</span>
+        <span class="eyebrow" id="rackCount"></span>
+      </div>
+    </div>
+    <div class="rack-body" id="rack"></div>
+    <div class="rack-foot">
+      Drag a game onto a screen, or tap it and then tap the screen. Drag between screens to swap, or back here to pull it.
+      <b>Sunday Ticket</b> carries every game listed; the network shown is the producing broadcast.
+    </div>
+  </aside>
+</main>
+
+<script id="sked" type="application/json">{"season":"2026","teams":{"CIN":{"abbr":"CIN","name":"Bengals","loc":"Cincinnati","color":"#fb4f14","alt":"#000000"},"TB":{"abbr":"TB","name":"Buccaneers","loc":"Tampa Bay","color":"#bd1c36","alt":"#3e3a35"},"DET":{"abbr":"DET","name":"Lions","loc":"Detroit","color":"#0076b6","alt":"#bbbbbb"},"NO":{"abbr":"NO","name":"Saints","loc":"New Orleans","color":"#d3bc8d","alt":"#000000"},"TEN":{"abbr":"TEN","name":"Titans","loc":"Tennessee","color":"#4495d2","alt":"#001532"},"NYJ":{"abbr":"NYJ","name":"Jets","loc":"New York","color":"#115740","alt":"#ffffff"},"IND":{"abbr":"IND","name":"Colts","loc":"Indianapolis","color":"#003b75","alt":"#ffffff"},"BAL":{"abbr":"BAL","name":"Ravens","loc":"Baltimore","color":"#29126f","alt":"#000000"},"PIT":{"abbr":"PIT","name":"Steelers","loc":"Pittsburgh","color":"#000000","alt":"#ffb612"},"ATL":{"abbr":"ATL","name":"Falcons","loc":"Atlanta","color":"#a71930","alt":"#000000"},"CAR":{"abbr":"CAR","name":"Panthers","loc":"Carolina","color":"#0085ca","alt":"#000000"},"CHI":{"abbr":"CHI","name":"Bears","loc":"Chicago","color":"#0b1c3a","alt":"#e64100"},"JAX":{"abbr":"JAX","name":"Jaguars","loc":"Jacksonville","color":"#007487","alt":"#d7a22a"},"CLE":{"abbr":"CLE","name":"Browns","loc":"Cleveland","color":"#472a08","alt":"#ff3c00"},"HOU":{"abbr":"HOU","name":"Texans","loc":"Houston","color":"#021018","alt":"#eb0028"},"BUF":{"abbr":"BUF","name":"Bills","loc":"Buffalo","color":"#00338d","alt":"#d50a0a"},"LV":{"abbr":"LV","name":"Raiders","loc":"Las Vegas","color":"#000000","alt":"#a5acaf"},"MIA":{"abbr":"MIA","name":"Dolphins","loc":"Miami","color":"#008e97","alt":"#fc4c02"},"MIN":{"abbr":"MIN","name":"Vikings","loc":"Minnesota","color":"#4f2683","alt":"#ffc62f"},"GB":{"abbr":"GB","name":"Packers","loc":"Green Bay","color":"#204e32","alt":"#ffb612"},"PHI":{"abbr":"PHI","name":"Eagles","loc":"Philadelphia","color":"#06424d","alt":"#000000"},"WSH":{"abbr":"WSH","name":"Commanders","loc":"Washington","color":"#5a1414","alt":"#ffb612"},"LAC":{"abbr":"LAC","name":"Chargers","loc":"Los Angeles","color":"#0080c6","alt":"#ffc20e"},"ARI":{"abbr":"ARI","name":"Cardinals","loc":"Arizona","color":"#a40227","alt":"#ffffff"},"NE":{"abbr":"NE","name":"Patriots","loc":"New England","color":"#002a5c","alt":"#c60c30"},"DEN":{"abbr":"DEN","name":"Broncos","loc":"Denver","color":"#0a2343","alt":"#fc4c02"},"DAL":{"abbr":"DAL","name":"Cowboys","loc":"Dallas","color":"#002a5c","alt":"#b0b7bc"},"SEA":{"abbr":"SEA","name":"Seahawks","loc":"Seattle","color":"#002a5c","alt":"#69be28"},"SF":{"abbr":"SF","name":"49ers","loc":"San Francisco","color":"#aa0000","alt":"#b3995d"},"KC":{"abbr":"KC","name":"Chiefs","loc":"Kansas City","color":"#e31837","alt":"#ffb612"},"NYG":{"abbr":"NYG","name":"Giants","loc":"New York","color":"#003c7f","alt":"#c9243f"},"LAR":{"abbr":"LAR","name":"Rams","loc":"Los Angeles","color":"#003594","alt":"#ffd100"}},"weeks":[{"week":1,"date":"Sep 13","games":[{"id":"401872658","away":"ATL","home":"PIT","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-13","venue":"Acrisure Stadium"},{"id":"401872659","away":"BAL","home":"IND","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-13","venue":"Lucas Oil Stadium"},{"id":"401872660","away":"BUF","home":"HOU","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-13","venue":"Reliant Stadium"},{"id":"401872661","away":"CHI","home":"CAR","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-13","venue":"Bank of America Stadium"},{"id":"401872922","away":"CLE","home":"JAX","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-13","venue":"EverBank Stadium"},{"id":"401872923","away":"NO","home":"DET","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-13","venue":"Ford Field"},{"id":"401872924","away":"NYJ","home":"TEN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-13","venue":"Nissan Stadium"},{"id":"401872925","away":"TB","home":"CIN","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-13","venue":"Paycor Stadium"},{"id":"401872926","away":"ARI","home":"LAC","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-09-13","venue":"SoFi Stadium"},{"id":"401872927","away":"GB","home":"MIN","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-09-13","venue":"U.S. Bank Stadium"},{"id":"401872928","away":"MIA","home":"LV","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-09-13","venue":"Allegiant Stadium"},{"id":"401872929","away":"WSH","home":"PHI","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-09-13","venue":"Lincoln Financial Field"}]},{"week":2,"date":"Sep 20","games":[{"id":"401872933","away":"CAR","home":"ATL","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-20","venue":"Mercedes-Benz Stadium"},{"id":"401872934","away":"CIN","home":"HOU","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-20","venue":"Reliant Stadium"},{"id":"401872935","away":"CLE","home":"TB","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-20","venue":"Raymond James Stadium"},{"id":"401872936","away":"GB","home":"NYJ","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-20","venue":"MetLife Stadium"},{"id":"401872937","away":"MIN","home":"CHI","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-20","venue":"Soldier Field"},{"id":"401872938","away":"NO","home":"BAL","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-20","venue":"M&T Bank Stadium"},{"id":"401872939","away":"PHI","home":"TEN","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-20","venue":"Nissan Stadium"},{"id":"401872946","away":"PIT","home":"NE","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-20","venue":"Gillette Stadium"},{"id":"401872940","away":"JAX","home":"DEN","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-09-20","venue":"Empower Field at Mile High"},{"id":"401872941","away":"LV","home":"LAC","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-09-20","venue":"SoFi Stadium"},{"id":"401872942","away":"MIA","home":"SF","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-09-20","venue":"Levi's Stadium"},{"id":"401872943","away":"SEA","home":"ARI","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-09-20","venue":"State Farm Stadium"},{"id":"401872944","away":"WSH","home":"DAL","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-09-20","venue":"AT&T Stadium"}]},{"week":3,"date":"Sep 27","games":[{"id":"401872949","away":"CAR","home":"CLE","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-27","venue":"Huntington Bank Field"},{"id":"401872950","away":"CIN","home":"PIT","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-27","venue":"Acrisure Stadium"},{"id":"401872951","away":"HOU","home":"IND","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-27","venue":"Lucas Oil Stadium"},{"id":"401872952","away":"KC","home":"MIA","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-27","venue":"Hard Rock Stadium"},{"id":"401872953","away":"LAC","home":"BUF","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-27","venue":"Highmark Stadium"},{"id":"401872957","away":"NE","home":"JAX","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-27","venue":"EverBank Stadium"},{"id":"401872954","away":"NYJ","home":"DET","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-27","venue":"Ford Field"},{"id":"401872955","away":"SEA","home":"WSH","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-09-27","venue":"Northwest Stadium"},{"id":"401872956","away":"TEN","home":"NYG","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-09-27","venue":"MetLife Stadium"},{"id":"401872958","away":"ARI","home":"SF","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-09-27","venue":"Levi's Stadium"},{"id":"401872959","away":"MIN","home":"TB","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-09-27","venue":"Raymond James Stadium"},{"id":"401872960","away":"BAL","home":"DAL","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-09-27","venue":"Maracan\u00e3 Stadium"},{"id":"401872961","away":"LV","home":"NO","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-09-27","venue":"Caesars Superdome"}]},{"week":4,"date":"Oct 4","games":[{"id":"401872966","away":"ARI","home":"NYG","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-04","venue":"MetLife Stadium"},{"id":"401872967","away":"DAL","home":"HOU","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-04","venue":"Reliant Stadium"},{"id":"401872968","away":"GB","home":"TB","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-04","venue":"Raymond James Stadium"},{"id":"401872969","away":"JAX","home":"CIN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-04","venue":"Paycor Stadium"},{"id":"401872970","away":"LAR","home":"PHI","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-04","venue":"Lincoln Financial Field"},{"id":"401872971","away":"NE","home":"BUF","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-04","venue":"Highmark Stadium"},{"id":"401872972","away":"NYJ","home":"CHI","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-04","venue":"Soldier Field"},{"id":"401872973","away":"TEN","home":"BAL","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-04","venue":"M&T Bank Stadium"},{"id":"401872974","away":"MIA","home":"MIN","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-10-04","venue":"U.S. Bank Stadium"},{"id":"401872975","away":"DEN","home":"SF","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-10-04","venue":"Levi's Stadium"},{"id":"401872976","away":"KC","home":"LV","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-10-04","venue":"Allegiant Stadium"},{"id":"401872977","away":"LAC","home":"SEA","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-10-04","venue":"Lumen Field"}]},{"week":5,"date":"Oct 11","games":[{"id":"401872982","away":"CIN","home":"MIA","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-11","venue":"Hard Rock Stadium"},{"id":"401872983","away":"CLE","home":"NYJ","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-11","venue":"MetLife Stadium"},{"id":"401872984","away":"HOU","home":"TEN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-11","venue":"Nissan Stadium"},{"id":"401872985","away":"IND","home":"PIT","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-11","venue":"Acrisure Stadium"},{"id":"401872986","away":"LV","home":"NE","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-11","venue":"Gillette Stadium"},{"id":"401872987","away":"MIN","home":"NO","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-11","venue":"Caesars Superdome"},{"id":"401872988","away":"NYG","home":"WSH","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-11","venue":"Northwest Stadium"},{"id":"401872989","away":"DEN","home":"LAC","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-10-11","venue":"SoFi Stadium"},{"id":"401872990","away":"CHI","home":"GB","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-10-11","venue":"Lambeau Field"},{"id":"401872991","away":"DET","home":"ARI","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-10-11","venue":"State Farm Stadium"},{"id":"401872992","away":"SF","home":"SEA","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-10-11","venue":"Lumen Field"}]},{"week":6,"date":"Oct 18","games":[{"id":"401872997","away":"BAL","home":"CLE","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-18","venue":"Huntington Bank Field"},{"id":"401872998","away":"CAR","home":"PHI","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-18","venue":"Lincoln Financial Field"},{"id":"401872999","away":"CHI","home":"ATL","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-18","venue":"Mercedes-Benz Stadium"},{"id":"401873000","away":"NO","home":"NYG","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-18","venue":"MetLife Stadium"},{"id":"401873001","away":"NYJ","home":"NE","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-18","venue":"Gillette Stadium"},{"id":"401873002","away":"PIT","home":"TB","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-18","venue":"Raymond James Stadium"},{"id":"401873003","away":"TEN","home":"IND","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-18","venue":"Lucas Oil Stadium"},{"id":"401873004","away":"ARI","home":"LAR","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-10-18","venue":"SoFi Stadium"},{"id":"401873005","away":"BUF","home":"LV","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-10-18","venue":"Allegiant Stadium"},{"id":"401873006","away":"LAC","home":"KC","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-10-18","venue":"Arrowhead Stadium"}]},{"week":7,"date":"Oct 25","games":[{"id":"401873012","away":"CIN","home":"BAL","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-25","venue":"M&T Bank Stadium"},{"id":"401873013","away":"CLE","home":"TEN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-25","venue":"Nissan Stadium"},{"id":"401873014","away":"IND","home":"MIN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-25","venue":"U.S. Bank Stadium"},{"id":"401873015","away":"MIA","home":"NYJ","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-10-25","venue":"MetLife Stadium"},{"id":"401873016","away":"NYG","home":"HOU","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-25","venue":"Reliant Stadium"},{"id":"401873017","away":"SF","home":"ATL","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-25","venue":"Mercedes-Benz Stadium"},{"id":"401873018","away":"TB","home":"CAR","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-10-25","venue":"Bank of America Stadium"},{"id":"401873019","away":"DEN","home":"ARI","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-10-25","venue":"State Farm Stadium"},{"id":"401873020","away":"GB","home":"DET","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-10-25","venue":"Ford Field"},{"id":"401873021","away":"LAR","home":"LV","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-10-25","venue":"Allegiant Stadium"}]},{"week":8,"date":"Nov 1","games":[{"id":"401873024","away":"ARI","home":"DAL","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-01","venue":"AT&T Stadium"},{"id":"401873025","away":"ATL","home":"TB","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-01","venue":"Raymond James Stadium"},{"id":"401873026","away":"BAL","home":"BUF","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-01","venue":"Highmark Stadium"},{"id":"401873027","away":"CLE","home":"PIT","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-01","venue":"Acrisure Stadium"},{"id":"401873028","away":"IND","home":"JAX","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-01","venue":"EverBank Stadium"},{"id":"401873029","away":"LV","home":"NYJ","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-01","venue":"MetLife Stadium"},{"id":"401873030","away":"MIN","home":"DET","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-01","venue":"Ford Field"},{"id":"401873031","away":"TEN","home":"CIN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-01","venue":"Paycor Stadium"},{"id":"401873032","away":"LAC","home":"LAR","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-11-01","venue":"SoFi Stadium"},{"id":"401873033","away":"KC","home":"DEN","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-11-01","venue":"Empower Field at Mile High"},{"id":"401873034","away":"NE","home":"MIA","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-11-01","venue":"Hard Rock Stadium"}]},{"week":9,"date":"Nov 8","games":[{"id":"401873039","away":"CLE","home":"NO","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-08","venue":"Caesars Superdome"},{"id":"401873040","away":"DAL","home":"IND","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-08","venue":"Lucas Oil Stadium"},{"id":"401873041","away":"DEN","home":"CAR","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-08","venue":"Bank of America Stadium"},{"id":"401873042","away":"DET","home":"MIA","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-08","venue":"Hard Rock Stadium"},{"id":"401873043","away":"LAR","home":"WSH","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-08","venue":"Northwest Stadium"},{"id":"401873044","away":"NYG","home":"PHI","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-08","venue":"Lincoln Financial Field"},{"id":"401873045","away":"NYJ","home":"KC","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-08","venue":"Arrowhead Stadium"},{"id":"401873046","away":"HOU","home":"LAC","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-11-08","venue":"SoFi Stadium"},{"id":"401873047","away":"LV","home":"SF","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-11-08","venue":"Levi's Stadium"},{"id":"401873048","away":"ARI","home":"SEA","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-11-08","venue":"Lumen Field"},{"id":"401873049","away":"GB","home":"NE","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-11-08","venue":"Gillette Stadium"}]},{"week":10,"date":"Nov 15","games":[{"id":"401873054","away":"BUF","home":"NYJ","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-15","venue":"MetLife Stadium"},{"id":"401873055","away":"CAR","home":"NO","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-15","venue":"Caesars Superdome"},{"id":"401873056","away":"HOU","home":"CLE","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-15","venue":"Huntington Bank Field"},{"id":"401873057","away":"JAX","home":"TEN","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-15","venue":"Nissan Stadium"},{"id":"401873058","away":"KC","home":"ATL","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-15","venue":"Mercedes-Benz Stadium"},{"id":"401873059","away":"MIA","home":"IND","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-15","venue":"Lucas Oil Stadium"},{"id":"401873060","away":"MIN","home":"GB","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-15","venue":"Lambeau Field"},{"id":"401873061","away":"LAR","home":"ARI","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-11-15","venue":"State Farm Stadium"},{"id":"401873062","away":"SEA","home":"LV","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-11-15","venue":"Allegiant Stadium"},{"id":"401873063","away":"SF","home":"DAL","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-11-15","venue":"AT&T Stadium"}]},{"week":11,"date":"Nov 22","games":[{"id":"401873067","away":"ARI","home":"KC","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-22","venue":"Arrowhead Stadium"},{"id":"401873068","away":"BAL","home":"CAR","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-22","venue":"Bank of America Stadium"},{"id":"401873069","away":"JAX","home":"NYG","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-22","venue":"MetLife Stadium"},{"id":"401873070","away":"MIA","home":"BUF","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-22","venue":"Highmark Stadium"},{"id":"401873071","away":"NO","home":"CHI","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-22","venue":"Soldier Field"},{"id":"401873072","away":"TB","home":"DET","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-22","venue":"Ford Field"},{"id":"401873073","away":"TEN","home":"DAL","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-22","venue":"AT&T Stadium"},{"id":"401873074","away":"NYJ","home":"LAC","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-11-22","venue":"SoFi Stadium"},{"id":"401873075","away":"LV","home":"DEN","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-11-22","venue":"Empower Field at Mile High"},{"id":"401873076","away":"PIT","home":"PHI","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-11-22","venue":"Lincoln Financial Field"}]},{"week":12,"date":"Nov 29","games":[{"id":"401873084","away":"ATL","home":"MIN","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-29","venue":"U.S. Bank Stadium"},{"id":"401873085","away":"BAL","home":"HOU","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-29","venue":"Reliant Stadium"},{"id":"401873086","away":"LV","home":"CLE","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-29","venue":"Huntington Bank Field"},{"id":"401873087","away":"NO","home":"CIN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-29","venue":"Paycor Stadium"},{"id":"401873088","away":"NYG","home":"IND","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-11-29","venue":"Lucas Oil Stadium"},{"id":"401873089","away":"NYJ","home":"MIA","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-11-29","venue":"Hard Rock Stadium"},{"id":"401873090","away":"TEN","home":"JAX","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-11-29","venue":"EverBank Stadium"},{"id":"401873091","away":"SEA","home":"SF","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-11-29","venue":"Levi's Stadium"},{"id":"401873092","away":"WSH","home":"ARI","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-11-29","venue":"State Farm Stadium"}]},{"week":13,"date":"Dec 6","games":[{"id":"401873097","away":"CIN","home":"CLE","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-06","venue":"Huntington Bank Field"},{"id":"401873098","away":"DET","home":"ATL","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-06","venue":"Mercedes-Benz Stadium"},{"id":"401873099","away":"GB","home":"NO","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-06","venue":"Caesars Superdome"},{"id":"401873100","away":"JAX","home":"CHI","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-06","venue":"Soldier Field"},{"id":"401873101","away":"LAC","home":"TB","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-06","venue":"Raymond James Stadium"},{"id":"401873095","away":"SF","home":"NYG","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-06","venue":"MetLife Stadium"},{"id":"401873102","away":"WSH","home":"TEN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-06","venue":"Nissan Stadium"},{"id":"401873103","away":"MIA","home":"DEN","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-12-06","venue":"Empower Field at Mile High"},{"id":"401873104","away":"PHI","home":"ARI","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-12-06","venue":"State Farm Stadium"},{"id":"401873105","away":"BUF","home":"NE","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-12-06","venue":"Gillette Stadium"},{"id":"401873106","away":"CAR","home":"MIN","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-12-06","venue":"U.S. Bank Stadium"}]},{"week":14,"date":"Dec 13","games":[{"id":"401873110","away":"ATL","home":"CLE","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-13","venue":"Huntington Bank Field"},{"id":"401873111","away":"CHI","home":"MIA","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-13","venue":"Hard Rock Stadium"},{"id":"401873112","away":"DEN","home":"NYJ","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-13","venue":"MetLife Stadium"},{"id":"401873113","away":"HOU","home":"WSH","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-13","venue":"Northwest Stadium"},{"id":"401873114","away":"IND","home":"PHI","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-13","venue":"Lincoln Financial Field"},{"id":"401873115","away":"NO","home":"CAR","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-13","venue":"Bank of America Stadium"},{"id":"401873116","away":"TB","home":"BAL","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-13","venue":"M&T Bank Stadium"},{"id":"401873117","away":"TEN","home":"DET","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-13","venue":"Ford Field"},{"id":"401873118","away":"LAC","home":"LV","slate":"late","time":"4:05 PM","net":"CBS","date":"2026-12-13","venue":"Allegiant Stadium"},{"id":"401873119","away":"KC","home":"CIN","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-12-13","venue":"Paycor Stadium"},{"id":"401873120","away":"LAR","home":"SF","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-12-13","venue":"Levi's Stadium"},{"id":"401873121","away":"NYG","home":"SEA","slate":"late","time":"4:25 PM","net":"FOX","date":"2026-12-13","venue":"Lumen Field"}]},{"week":15,"date":"Dec 20","games":[{"id":"401873127","away":"ATL","home":"WSH","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-20","venue":"Northwest Stadium"},{"id":"401873128","away":"BAL","home":"PIT","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-20","venue":"Acrisure Stadium"},{"id":"401873129","away":"CIN","home":"CAR","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-20","venue":"Bank of America Stadium"},{"id":"401873130","away":"CLE","home":"NYG","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-20","venue":"MetLife Stadium"},{"id":"401873131","away":"IND","home":"TEN","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-20","venue":"Nissan Stadium"},{"id":"401873132","away":"JAX","home":"HOU","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-20","venue":"Reliant Stadium"},{"id":"401873133","away":"MIA","home":"GB","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-20","venue":"Lambeau Field"},{"id":"401873134","away":"NO","home":"TB","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-20","venue":"Raymond James Stadium"},{"id":"401873135","away":"NYJ","home":"ARI","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-12-20","venue":"State Farm Stadium"},{"id":"401873136","away":"DAL","home":"LAR","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-12-20","venue":"SoFi Stadium"},{"id":"401873137","away":"DEN","home":"LV","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-12-20","venue":"Allegiant Stadium"}]},{"week":16,"date":"Dec 27","games":[{"id":"401873148","away":"ARI","home":"NO","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-27","venue":"Caesars Superdome"},{"id":"401873149","away":"CLE","home":"BAL","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-27","venue":"M&T Bank Stadium"},{"id":"401873150","away":"LAC","home":"MIA","slate":"early","time":"1:00 PM","net":"FOX","date":"2026-12-27","venue":"Hard Rock Stadium"},{"id":"401873151","away":"NE","home":"NYJ","slate":"early","time":"1:00 PM","net":"CBS","date":"2026-12-27","venue":"MetLife Stadium"},{"id":"401873152","away":"TEN","home":"LV","slate":"late","time":"4:05 PM","net":"FOX","date":"2026-12-27","venue":"Allegiant Stadium"},{"id":"401873153","away":"SF","home":"KC","slate":"late","time":"4:25 PM","net":"CBS","date":"2026-12-27","venue":"Arrowhead Stadium"},{"id":"401873144","away":"CAR","home":"PIT","slate":"tbd","time":"","net":"","date":"2026-12-27","venue":"Acrisure Stadium"},{"id":"401873145","away":"CIN","home":"IND","slate":"tbd","time":"","net":"","date":"2026-12-27","venue":"Lucas Oil Stadium"},{"id":"401873146","away":"TB","home":"ATL","slate":"tbd","time":"","net":"","date":"2026-12-27","venue":"Mercedes-Benz Stadium"},{"id":"401873147","away":"WSH","home":"MIN","slate":"tbd","time":"","net":"","date":"2026-12-27","venue":"U.S. Bank Stadium"}]},{"week":17,"date":"Jan 3","games":[{"id":"401873161","away":"BUF","home":"MIA","slate":"early","time":"1:00 PM","net":"CBS","date":"2027-01-03","venue":"Hard Rock Stadium"},{"id":"401873162","away":"IND","home":"CLE","slate":"early","time":"1:00 PM","net":"FOX","date":"2027-01-03","venue":"Huntington Bank Field"},{"id":"401873163","away":"MIN","home":"NYJ","slate":"early","time":"1:00 PM","net":"CBS","date":"2027-01-03","venue":"MetLife Stadium"},{"id":"401873164","away":"NO","home":"ATL","slate":"early","time":"1:00 PM","net":"FOX","date":"2027-01-03","venue":"Mercedes-Benz Stadium"},{"id":"401873165","away":"NYG","home":"DAL","slate":"early","time":"1:00 PM","net":"FOX","date":"2027-01-03","venue":"AT&T Stadium"},{"id":"401873166","away":"PIT","home":"TEN","slate":"early","time":"1:00 PM","net":"CBS","date":"2027-01-03","venue":"Nissan Stadium"},{"id":"401873167","away":"SEA","home":"CAR","slate":"early","time":"1:00 PM","net":"FOX","date":"2027-01-03","venue":"Bank of America Stadium"},{"id":"401873168","away":"LV","home":"ARI","slate":"late","time":"4:05 PM","net":"CBS","date":"2027-01-03","venue":"State Farm Stadium"},{"id":"401873169","away":"DET","home":"CHI","slate":"late","time":"4:25 PM","net":"FOX","date":"2027-01-03","venue":"Soldier Field"},{"id":"401873157","away":"DEN","home":"NE","slate":"tbd","time":"","net":"","date":"2027-01-03","venue":"Gillette Stadium"},{"id":"401873158","away":"KC","home":"LAC","slate":"tbd","time":"","net":"","date":"2027-01-03","venue":"SoFi Stadium"},{"id":"401873159","away":"LAR","home":"TB","slate":"tbd","time":"","net":"","date":"2027-01-03","venue":"Raymond James Stadium"},{"id":"401873160","away":"WSH","home":"JAX","slate":"tbd","time":"","net":"","date":"2027-01-03","venue":"EverBank Stadium"}]},{"week":18,"date":"Jan 10","games":[{"id":"401873172","away":"ATL","home":"CAR","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Bank of America Stadium"},{"id":"401873173","away":"CHI","home":"MIN","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"U.S. Bank Stadium"},{"id":"401873174","away":"CLE","home":"CIN","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Paycor Stadium"},{"id":"401873175","away":"DAL","home":"WSH","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Northwest Stadium"},{"id":"401873176","away":"DET","home":"GB","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Lambeau Field"},{"id":"401873177","away":"JAX","home":"IND","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Lucas Oil Stadium"},{"id":"401873179","away":"LAC","home":"DEN","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Empower Field at Mile High"},{"id":"401873178","away":"LV","home":"KC","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Arrowhead Stadium"},{"id":"401873180","away":"MIA","home":"NE","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Gillette Stadium"},{"id":"401873181","away":"NYJ","home":"BUF","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Highmark Stadium"},{"id":"401873182","away":"PHI","home":"NYG","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"MetLife Stadium"},{"id":"401873183","away":"PIT","home":"BAL","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"M&T Bank Stadium"},{"id":"401873185","away":"SEA","home":"LAR","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"SoFi Stadium"},{"id":"401873184","away":"SF","home":"ARI","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"State Farm Stadium"},{"id":"401873186","away":"TB","home":"NO","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Caesars Superdome"},{"id":"401873187","away":"TEN","home":"HOU","slate":"tbd","time":"","net":"","date":"2027-01-10","venue":"Reliant Stadium"}]}]}</script>
+<script>
+(function(){
+"use strict";
+
+var SKED = JSON.parse(document.getElementById("sked").textContent);
+var TEAMS = SKED.teams, WEEKS = SKED.weeks;
+var LS_KEY = "sundaywall.v1.2026";
+var DB_PATH = "plans/2026";
+
+var SLOTS = {
+  top: ["top-1","top-2"],
+  main:["main-1","main-2","main-3","main-4"],
+  bot: ["bot-1","bot-2"]
+};
+var SLOT_LABEL = {
+  "top-1":"Top 1","top-2":"Top 2",
+  "main-1":"Main 1","main-2":"Main 2","main-3":"Main 3","main-4":"Main 4",
+  "bot-1":"Bottom 1","bot-2":"Bottom 2"
+};
+
+/* ---------------- state ---------------- */
+var state = { week:1, slate:"early", plans:{} };
+var armed = null;                 // {k:"g",id} | {k:"rz"} | {k:"slot",slot}
+var db = null, dbDoc = null, lastPushed = "", writeTimer = null;
+
+function blankPlan(){
+  return { topMode:"single", botMode:"single", slots:{} };
+}
+function key(){ return state.week + "-" + state.slate; }
+function plan(){
+  var k = key();
+  if(!state.plans[k]) state.plans[k] = blankPlan();
+  return state.plans[k];
+}
+function weekData(){
+  for(var i=0;i<WEEKS.length;i++){ if(WEEKS[i].week===state.week) return WEEKS[i]; }
+  return WEEKS[0];
+}
+function gameById(id){
+  var w = weekData();
+  for(var i=0;i<w.games.length;i++){ if(w.games[i].id===id) return w.games[i]; }
+  return null;
+}
+/* games shown for the active slate: that window, plus any flex game whose window is not set yet */
+function rackGames(){
+  var w = weekData(), a = [], b = [];
+  for(var i=0;i<w.games.length;i++){
+    var g = w.games[i];
+    if(g.slate === state.slate) a.push(g);
+    else if(g.slate === "tbd") b.push(g);
+  }
+  return { fixed:a, flex:b };
+}
+function activeSlots(){
+  var p = plan();
+  return (p.topMode==="split" ? SLOTS.top : ["top-1"])
+    .concat(SLOTS.main)
+    .concat(p.botMode==="split" ? SLOTS.bot : ["bot-1"]);
+}
+
+/* ---------------- persistence ---------------- */
+function loadLocal(){
+  try{
+    var raw = localStorage.getItem(LS_KEY);
+    if(raw){ var o = JSON.parse(raw); if(o && o.plans) state.plans = o.plans; }
+  }catch(e){}
+}
+function serialize(){ return JSON.stringify({ v:1, plans:state.plans, savedAt:Date.now() }); }
+function save(){
+  var payload = serialize();
+  try{ localStorage.setItem(LS_KEY, payload); }catch(e){}
+  if(dbDoc){
+    setSync("saving","Saving…");
+    clearTimeout(writeTimer);
+    writeTimer = setTimeout(function(){
+      var body = { v:1, plans:state.plans, savedAt:Date.now() };
+      lastPushed = JSON.stringify(body.plans);
+      dbDoc.set(body).then(function(){
+        setSync("synced","Synced to your account");
+      })["catch"](function(){
+        setSync("local","Saved on this device");
+      });
+    }, 400);
+  }
+}
+function setSync(st, txt){
+  var el = document.getElementById("sync");
+  el.setAttribute("data-state", st);
+  document.getElementById("syncTxt").textContent = txt;
+}
+function connectDb(){
+  if(!window.claude || typeof window.claude.use !== "function") return;
+  window.claude.use("db").then(function(ns){
+    if(!ns) return;
+    db = ns; dbDoc = db.doc(DB_PATH);
+    dbDoc.onSnapshot(function(snap){
+      if(!snap.exists || !snap.data || !snap.data.plans) { setSync("synced","Synced to your account"); return; }
+      var incoming = JSON.stringify(snap.data.plans);
+      if(incoming !== lastPushed && incoming !== JSON.stringify(state.plans)){
+        state.plans = snap.data.plans;
+        try{ localStorage.setItem(LS_KEY, serialize()); }catch(e){}
+        render();
+      }
+      lastPushed = incoming;
+      setSync("synced","Synced to your account");
+    }, function(){ setSync("local","Saved on this device"); });
+  })["catch"](function(){});
+}
+
+/* ---------------- placement ---------------- */
+function findSlotOf(item){
+  var s = plan().slots, k;
+  for(k in s){
+    if(!s.hasOwnProperty(k)) continue;
+    var v = s[k];
+    if(!v) continue;
+    if(item.k==="rz" && v.k==="rz") return k;
+    if(item.k==="g" && v.k==="g" && v.id===item.id) return k;
+  }
+  return null;
+}
+function place(item, slot){
+  var p = plan();
+  if(item.k === "slot"){                       // moving between screens: swap
+    var from = item.slot;
+    if(from === slot) return;
+    var a = p.slots[from] || null, b = p.slots[slot] || null;
+    p.slots[slot] = a;
+    if(b) p.slots[from] = b; else delete p.slots[from];
+    if(!p.slots[slot]) delete p.slots[slot];
+  } else {
+    var existing = findSlotOf(item);            // one stream, one screen
+    if(existing) delete p.slots[existing];
+    p.slots[slot] = item;
+  }
+  save(); render();
+}
+function clearSlot(slot){
+  var p = plan();
+  if(p.slots[slot]){ delete p.slots[slot]; save(); render(); }
+}
+function setMode(which, mode){
+  var p = plan();
+  if(which==="top"){ if(p.topMode===mode) return; p.topMode = mode; if(mode==="single") delete p.slots["top-2"]; }
+  else { if(p.botMode===mode) return; p.botMode = mode; if(mode==="single") delete p.slots["bot-2"]; }
+  save(); render();
+}
+function clearWall(){ state.plans[key()] = { topMode:plan().topMode, botMode:plan().botMode, slots:{} }; save(); render(); }
+function autoFill(){
+  var p = plan(), open = activeSlots().filter(function(s){ return !p.slots[s]; });
+  if(!open.length) return;
+  var order = SLOTS.main.concat(["top-1","top-2","bot-1","bot-2"]).filter(function(s){ return open.indexOf(s)>-1; });
+  var r = rackGames(), pool = r.fixed.concat(r.flex).filter(function(g){ return !findSlotOf({k:"g",id:g.id}); });
+  for(var i=0; i<order.length && i<pool.length; i++) p.slots[order[i]] = { k:"g", id:pool[i].id };
+  save(); render();
+}
+
+/* ---------------- arming (tap to place) ---------------- */
+function setArmed(item){
+  armed = item;
+  var bar = document.getElementById("armed");
+  if(!item){ bar.classList.remove("on"); render(); return; }
+  var txt = item.k==="rz" ? "NFL RedZone" :
+            item.k==="slot" ? (SLOT_LABEL[item.slot] + " — pick a screen to swap with") :
+            label(gameById(item.id));
+  document.getElementById("armedTxt").textContent =
+    (item.k==="slot" ? txt : "▸ " + txt + " — tap a screen to place it");
+  bar.classList.add("on");
+  render();
+}
+function label(g){ return g ? (g.away + " @ " + g.home) : ""; }
+
+/* ---------------- rendering ---------------- */
+function slotEl(id){
+  var p = plan(), item = p.slots[id] || null;
+  var el = document.createElement("div");
+  el.className = "slot" + (item ? " filled" : "");
+  el.setAttribute("data-slot", id);
+  el.setAttribute("tabindex","0");
+  el.setAttribute("role","button");
+
+  if(armed && !item) el.classList.add("armable");
+
+  if(!item){
+    el.setAttribute("aria-label", SLOT_LABEL[id] + ", empty");
+    el.innerHTML = '<div class="slot-empty"><span class="plus">+</span><span class="id">' +
+      SLOT_LABEL[id] + '</span></div>';
+  } else if(item.k === "rz"){
+    el.classList.add("rz");
+    el.setAttribute("draggable","true");
+    el.setAttribute("aria-label", SLOT_LABEL[id] + ", NFL RedZone");
+    el.innerHTML =
+      '<button class="slot-x" type="button" aria-label="Clear ' + SLOT_LABEL[id] + '">×</button>' +
+      '<div class="rz-in"><div class="rz-t">RedZone</div><div class="rz-s">Every touchdown</div></div>';
+  } else {
+    var g = gameById(item.id);
+    if(!g){ delete p.slots[id]; return slotEl(id); }
+    var ta = TEAMS[g.away], th = TEAMS[g.home];
+    el.setAttribute("draggable","true");
+    el.setAttribute("aria-label", SLOT_LABEL[id] + ", " + ta.loc + " " + ta.name + " at " + th.loc + " " + th.name);
+    el.innerHTML =
+      '<button class="slot-x" type="button" aria-label="Clear ' + SLOT_LABEL[id] + '">×</button>' +
+      '<div class="matchup">' +
+        '<div class="side" style="--tc:' + ta.color + '"><span class="abbr">' + g.away + '</span><span class="role">AWAY</span></div>' +
+        '<span class="at">@</span>' +
+        '<div class="side" style="--tc:' + th.color + '"><span class="abbr">' + g.home + '</span><span class="role">HOME</span></div>' +
+      '</div>' +
+      '<div class="slot-foot"><span class="net">' + (g.net || "TBD") + '</span>' +
+        '<span class="tm">' + (g.time || "Flex") + '</span></div>';
+  }
+  return el;
+}
+
+function chipEl(kind, g){
+  var el = document.createElement("div");
+  el.className = "chip";
+  el.setAttribute("draggable","true");
+  el.setAttribute("tabindex","0");
+  el.setAttribute("role","button");
+
+  var item = kind==="rz" ? {k:"rz"} : {k:"g", id:g.id};
+  var at = findSlotOf(item);
+  if(at) el.classList.add("placed");
+  if(armed && armed.k===item.k && (item.k==="rz" || armed.id===item.id)) el.classList.add("armed");
+
+  if(kind==="rz"){
+    el.className += " rz";
+    el.setAttribute("data-rz","1");
+    el.setAttribute("aria-label","NFL RedZone");
+    el.innerHTML =
+      '<div class="chip-bars"><span></span></div>' +
+      '<div class="chip-main">' +
+        '<div class="chip-teams">NFL RedZone</div>' +
+        '<div class="chip-meta"><span class="net">RZ</span><span>Whips around every game</span></div>' +
+      '</div>' + (at ? '<div class="chip-where">' + SLOT_LABEL[at] + '</div>' : '');
+  } else {
+    var ta = TEAMS[g.away], th = TEAMS[g.home];
+    el.setAttribute("data-game", g.id);
+    el.setAttribute("aria-label", ta.loc + " " + ta.name + " at " + th.loc + " " + th.name);
+    el.innerHTML =
+      '<div class="chip-bars"><span style="--bc:' + ta.color + '"></span><span style="--bc:' + th.color + '"></span></div>' +
+      '<div class="chip-main">' +
+        '<div class="chip-teams">' + ta.name + ' <span class="vs">at</span> ' + th.name + '</div>' +
+        '<div class="chip-meta"><span class="net">' + (g.net || "TBD") + '</span>' +
+          '<span>' + (g.time || "Window TBD") + '</span><span>' + g.away + ' @ ' + g.home + '</span></div>' +
+      '</div>' + (at ? '<div class="chip-where">' + SLOT_LABEL[at] + '</div>' : '');
+  }
+  return el;
+}
+
+function secEl(text){
+  var d = document.createElement("div");
+  d.className = "rack-sec";
+  d.innerHTML = '<span class="eyebrow">' + text + '</span>';
+  return d;
+}
+
+function render(){
+  var p = plan(), w = weekData();
+
+  /* week + slate controls */
+  document.getElementById("wkSel").value = String(state.week);
+  document.getElementById("wkPrev").disabled = state.week <= 1;
+  document.getElementById("wkNext").disabled = state.week >= 18;
+  document.getElementById("slateEarly").setAttribute("aria-pressed", String(state.slate==="early"));
+  document.getElementById("slateLate").setAttribute("aria-pressed", String(state.slate==="late"));
+
+  /* tv layout toggles */
+  document.getElementById("screen-top").setAttribute("data-layout", p.topMode);
+  document.getElementById("screen-bot").setAttribute("data-layout", p.botMode);
+  var toggles = document.querySelectorAll('.tv-head .seg button');
+  for(var i=0;i<toggles.length;i++){
+    var b = toggles[i], mine = b.getAttribute("data-for")==="top" ? p.topMode : p.botMode;
+    b.setAttribute("aria-pressed", String(b.getAttribute("data-mode")===mine));
+  }
+
+  /* screens */
+  ["top","main","bot"].forEach(function(tv){
+    var host = document.getElementById("screen-" + tv);
+    var ids = tv==="main" ? SLOTS.main : (( tv==="top" ? p.topMode : p.botMode)==="split" ? SLOTS[tv] : [tv+"-1"]);
+    host.innerHTML = "";
+    ids.forEach(function(id){ host.appendChild(slotEl(id)); });
+  });
+
+  /* tally */
+  var act = activeSlots(), on = 0;
+  act.forEach(function(s){ if(p.slots[s]) on++; });
+  document.getElementById("tallyOn").textContent = String(on);
+  document.getElementById("tallyCap").textContent = String(act.length);
+
+  /* rack */
+  document.getElementById("rackTitle").textContent = state.slate==="early" ? "1:00 ET Slate" : "4:00 ET Slate";
+  document.getElementById("rackDate").textContent = "Week " + w.week + " · " + w.date;
+  var r = rackGames();
+  var total = r.fixed.length + r.flex.length;
+  var unplaced = 0;
+  r.fixed.concat(r.flex).forEach(function(g){ if(!findSlotOf({k:"g",id:g.id})) unplaced++; });
+  document.getElementById("rackCount").textContent = "· " + total + " games · " + unplaced + " on the bench";
+
+  var rack = document.getElementById("rack");
+  rack.innerHTML = "";
+  rack.appendChild(secEl("Always available"));
+  rack.appendChild(chipEl("rz"));
+
+  if(r.fixed.length){
+    rack.appendChild(secEl(state.slate==="early" ? "1:00 ET kickoff" : "4:00 ET kickoff"));
+    r.fixed.forEach(function(g){ rack.appendChild(chipEl("game", g)); });
+  }
+  if(r.flex.length){
+    rack.appendChild(secEl("Flex · window not set"));
+    var n = document.createElement("p");
+    n.className = "note";
+    n.innerHTML = w.week === 18
+      ? "<b>Week 18 is flexed in full.</b> The NFL sets all 16 kickoffs after Week 17, so every game sits here until then — drop them into either window to sketch the wall."
+      : "<b>These kickoffs move.</b> The league flexes them closer to game week; park them in whichever window you expect.";
+    rack.appendChild(n);
+    r.flex.forEach(function(g){ rack.appendChild(chipEl("game", g)); });
+  }
+  if(!total){
+    var e = document.createElement("div");
+    e.className = "empty-rack";
+    e.textContent = "No games in this window.";
+    rack.appendChild(e);
+  }
+}
+
+/* ---------------- drag & drop + clicks ---------------- */
+function payloadFrom(el){
+  if(el.hasAttribute("data-slot")) return { k:"slot", slot: el.getAttribute("data-slot") };
+  if(el.hasAttribute("data-rz")) return { k:"rz" };
+  if(el.hasAttribute("data-game")) return { k:"g", id: el.getAttribute("data-game") };
+  return null;
+}
+function closestDraggable(t){
+  while(t && t !== document.body){
+    if(t.classList && (t.classList.contains("chip") || t.classList.contains("slot"))) return t;
+    t = t.parentNode;
+  }
+  return null;
+}
+
+document.addEventListener("dragstart", function(e){
+  var el = closestDraggable(e.target);
+  if(!el || el.getAttribute("draggable") !== "true") return;
+  var p = payloadFrom(el);
+  if(!p || (p.k === "slot" && !plan().slots[p.slot])) { e.preventDefault(); return; }
+  e.dataTransfer.effectAllowed = "move";
+  try{ e.dataTransfer.setData("text/plain", JSON.stringify(p)); }catch(err){}
+  el.classList.add("dragging");
+  setArmed(null);
+});
+document.addEventListener("dragend", function(e){
+  var el = closestDraggable(e.target);
+  if(el) el.classList.remove("dragging");
+  var over = document.querySelectorAll(".over");
+  for(var i=0;i<over.length;i++) over[i].classList.remove("over");
+});
+document.addEventListener("dragover", function(e){
+  var slot = e.target.closest ? e.target.closest(".slot") : null;
+  var rack = e.target.closest ? e.target.closest("#rack") : null;
+  if(slot || rack){ e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
+});
+document.addEventListener("dragenter", function(e){
+  var slot = e.target.closest ? e.target.closest(".slot") : null;
+  if(slot) slot.classList.add("over");
+  var rack = e.target.closest ? e.target.closest("#rack") : null;
+  if(rack) rack.classList.add("over");
+});
+document.addEventListener("dragleave", function(e){
+  var slot = e.target.closest ? e.target.closest(".slot") : null;
+  if(slot && !slot.contains(e.relatedTarget)) slot.classList.remove("over");
+  var rack = e.target.closest ? e.target.closest("#rack") : null;
+  if(rack && !rack.contains(e.relatedTarget)) rack.classList.remove("over");
+});
+document.addEventListener("drop", function(e){
+  var raw = "";
+  try{ raw = e.dataTransfer.getData("text/plain"); }catch(err){}
+  if(!raw) return;
+  var item; try{ item = JSON.parse(raw); }catch(err){ return; }
+  var slot = e.target.closest ? e.target.closest(".slot") : null;
+  var rack = e.target.closest ? e.target.closest("#rack") : null;
+  if(slot){ e.preventDefault(); place(item, slot.getAttribute("data-slot")); return; }
+  if(rack && item.k === "slot"){ e.preventDefault(); clearSlot(item.slot); }
+});
+
+document.addEventListener("click", function(e){
+  var x = e.target.closest ? e.target.closest(".slot-x") : null;
+  if(x){ e.stopPropagation(); clearSlot(x.parentNode.getAttribute("data-slot")); return; }
+
+  var el = closestDraggable(e.target);
+  if(!el) return;
+  var p = payloadFrom(el);
+  if(!p) return;
+
+  if(el.classList.contains("slot")){
+    var here = plan().slots[p.slot];
+    if(armed){ place(armed, p.slot); setArmed(null); return; }
+    if(here){ setArmed({k:"slot", slot:p.slot}); }
+    return;
+  }
+  /* a rack chip */
+  if(armed && armed.k===p.k && (p.k==="rz" || armed.id===p.id)){ setArmed(null); return; }
+  if(armed && armed.k==="slot"){ place(p, armed.slot); setArmed(null); return; }
+  setArmed(p);
+});
+
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && armed){ setArmed(null); return; }
+  var el = document.activeElement;
+  if(!el || el.tagName === "BUTTON" || el.tagName === "SELECT") return;
+  if(!closestDraggable(el)) return;
+  var p = payloadFrom(el);
+  if(!p) return;
+  if(e.key === "Enter" || e.key === " "){
+    e.preventDefault();
+    el.click();
+  } else if((e.key === "Delete" || e.key === "Backspace") && p.k === "slot"){
+    e.preventDefault(); clearSlot(p.slot);
+  }
+});
+
+/* ---------------- controls ---------------- */
+document.getElementById("armedX").addEventListener("click", function(){ setArmed(null); });
+document.getElementById("btnClear").addEventListener("click", clearWall);
+document.getElementById("btnFill").addEventListener("click", autoFill);
+document.getElementById("wkPrev").addEventListener("click", function(){ if(state.week>1){ state.week--; setArmed(null); render(); } });
+document.getElementById("wkNext").addEventListener("click", function(){ if(state.week<18){ state.week++; setArmed(null); render(); } });
+document.getElementById("wkSel").addEventListener("change", function(e){ state.week = parseInt(e.target.value,10); setArmed(null); render(); });
+["slateEarly","slateLate"].forEach(function(id){
+  document.getElementById(id).addEventListener("click", function(e){
+    state.slate = e.currentTarget.getAttribute("data-slate"); setArmed(null); render();
+  });
+});
+var modeBtns = document.querySelectorAll('.tv-head .seg button');
+for(var mi=0; mi<modeBtns.length; mi++){
+  modeBtns[mi].addEventListener("click", function(e){
+    setMode(e.currentTarget.getAttribute("data-for"), e.currentTarget.getAttribute("data-mode"));
+  });
+}
+
+/* ---------------- boot ---------------- */
+(function init(){
+  var sel = document.getElementById("wkSel");
+  WEEKS.forEach(function(w){
+    var o = document.createElement("option");
+    o.value = String(w.week);
+    o.textContent = "Week " + w.week + " — " + w.date;
+    sel.appendChild(o);
+  });
+  loadLocal();
+
+  /* open on the week that is actually next, so the page lands on real work */
+  var today = new Date(), best = 1;
+  for(var i=0;i<WEEKS.length;i++){
+    var g = WEEKS[i].games[0];
+    if(!g) continue;
+    var d = new Date(g.date + "T23:59:59");
+    if(d >= today){ best = WEEKS[i].week; break; }
+    best = WEEKS[i].week;
+  }
+  state.week = best;
+
+  /* first visit: show the wall doing its job rather than eight empty boxes */
+  if(!state.plans[key()]){
+    var p = plan(), r = rackGames(), pool = r.fixed.concat(r.flex);
+    p.botMode = "split";
+    var seats = ["main-1","main-2","main-3","main-4","top-1"];
+    for(var s=0; s<seats.length && s<pool.length; s++) p.slots[seats[s]] = { k:"g", id:pool[s].id };
+    p.slots["bot-1"] = { k:"rz" };
+  }
+
+  render();
+  connectDb();
+})();
+})();
+</script>
