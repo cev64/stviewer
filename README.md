@@ -39,10 +39,13 @@ it.
 Every week and window opens the same way: **RedZone on the top 40″, every other
 screen blank.** Build from there.
 
-- **Drag** a game from the rack onto a screen. Drag between screens to swap them,
-  or drag one back to the rack to pull it. On a touchscreen, press and hold for
-  about half a second to pick a game up — it buzzes and lifts so you can tell.
-  Anything shorter stays a scroll.
+- **Drag** a game from the rack onto a screen, with a mouse or trackpad. Drag
+  between screens to swap them, or drag one back to the rack to pull it.
+- **On a touchscreen**, dragging works between screens — press and hold about half
+  a second, and it buzzes and lifts when the game is picked up. The games list
+  itself never starts a drag: a list you scroll and a press-and-hold to pick up
+  are the same gesture, and losing scrolls is the worse trade. Tap to place from
+  the list instead.
 - **Or tap** a game, then tap a screen.
 - **Tap a game already on a screen** to cover it with a red ✕. The ✕ removes it,
   the red around the ✕ backs out, and tapping a different screen swaps the two.

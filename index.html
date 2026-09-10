@@ -225,6 +225,10 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .slot:focus-visible{outline:2px solid var(--accent); outline-offset:-3px}
 .slot.dragging{opacity:.35}
 .chip.dragging, .slot.dragging{outline:1px dashed var(--accent); outline-offset:-2px}
+.chip.held, .slot.held{
+  outline:2px solid var(--accent); outline-offset:-2px;
+  box-shadow:0 0 0 4px var(--accent-glow);
+}
 
 .slot-empty{
   margin:auto; display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -336,9 +340,8 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 /* ---------- the rack ---------- */
 .rack{
   background:var(--panel); border:1px solid var(--line); border-radius:12px;
-  box-shadow:var(--shadow); overflow:hidden; position:sticky; top:76px;
+  box-shadow:var(--shadow); overflow:hidden;
 }
-@media (max-width:1040px){ .rack{position:static} }
 .rack-head{padding:13px 15px 11px; border-bottom:1px solid var(--line-soft)}
 .rack-head h2{
   font-size:20px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; line-height:1.1;
@@ -346,9 +349,11 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .rack-head .sub{margin-top:3px; display:flex; gap:10px; align-items:baseline}
 .rack-body{
   padding:11px; display:flex; flex-direction:column; gap:7px;
-  max-height:min(72vh,760px); overflow-y:auto; overscroll-behavior:contain;
 }
-@media (max-width:1040px){ .rack-body{max-height:none} }
+@media (min-width:1041px) and (pointer:fine){
+  .rack{position:sticky; top:76px}
+  .rack-body{max-height:min(72vh,760px); overflow-y:auto}
+}
 .rack-body.over{background:color-mix(in srgb, var(--accent) 9%, transparent)}
 
 .chip{
@@ -524,6 +529,7 @@ body.dragging-now .chip, body.dragging-now .slot{cursor:grabbing}
     <div class="rack-foot">
       Drag a game onto a screen — press and hold first on a touchscreen — or tap it and then tap the screen.
       Tap a game already on a screen to remove it or swap it somewhere else.
+      On a phone, tapping is the way to place a game &mdash; the list stays free to scroll.
       <b>Sunday Ticket</b> carries every game listed; the network shown is the producing broadcast.
     </div>
   </aside>
@@ -956,6 +962,7 @@ function endDrag(commit, x, y){
   if(d.timer) clearTimeout(d.timer);
   if(d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
   d.el.classList.remove("dragging");
+  d.el.classList.remove("held");
   document.body.classList.remove("dragging-now");
   clearHighlights();
   if(!d.active) return false;              /* never crossed the threshold — let it be a tap */
@@ -991,6 +998,7 @@ function trackTo(x, y){
 function abortDrag(){
   if(!drag) return;
   clearTimeout(drag.timer);
+  drag.el.classList.remove("held");
   if(drag.active) endDrag(false, null, null);
   else drag = null;
 }
@@ -1041,14 +1049,15 @@ document.addEventListener("touchstart", function(e){
   if(drag) abortDrag();                      /* a second finger cancels any drag in progress */
   if(e.touches.length !== 1) return;
   var el = pickup(e.target);
-  if(!el) return;
+  if(!el || !el.classList.contains("slot")) return;
   var t = e.touches[0];
   drag = newDrag(el, t.clientX, t.clientY, true);
   drag.tid = t.identifier;
+  drag.t0 = e.timeStamp || performance.now();
   drag.timer = setTimeout(function(){
     if(!drag || drag.active) return;
-    drag.ready = true;
-    beginDrag(drag.x0, drag.y0);
+    drag.ready = true;                       /* armed, not yet dragging */
+    drag.el.classList.add("held");
     if(navigator.vibrate) { try{ navigator.vibrate(14); }catch(err){} }
   }, 450);
 }, { passive:true });
@@ -1059,9 +1068,9 @@ document.addEventListener("touchmove", function(e){
   if(!t){ abortDrag(); return; }             /* our finger is gone — never hold the page hostage */
   var dist = Math.abs(t.clientX - drag.x0) + Math.abs(t.clientY - drag.y0);
   if(!drag.active){
-    /* moved before the hold landed — they wanted to scroll, so let them */
-    if(!drag.ready){ if(dist > 10) abortDrag(); return; }
-    beginDrag(t.clientX, t.clientY);
+    var held = (e.timeStamp || performance.now()) - drag.t0;
+    if(held < 450){ if(dist > 12) abortDrag(); return; }   /* moved early: they are scrolling */
+    beginDrag(t.clientX, t.clientY);                       /* moved after a real hold */
   }
   if(dist > 10) drag.moved = true;
   if(drag.ghost && e.cancelable) e.preventDefault();
