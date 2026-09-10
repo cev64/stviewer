@@ -11,11 +11,22 @@ Open `index.html` in a browser. No build step, no server, no dependencies.
 | Screen | Layouts |
 | --- | --- |
 | Top 40″ | 1 up, or 2 up |
-| Main 65″ | Quad box (always four) |
+| Main 65″ | 1 up, 2 up, or quad box |
 | Bottom 40″ | 1 up, or 2 up |
 
-Six to eight streams depending on how the 40″ sets are split. NFL RedZone sits at
-the top of the rack and can take any of those slots in either window.
+Three to eight streams depending on how the sets are split. NFL RedZone sits at
+the top of the rack and can take any of those slots in either window. Dropping to
+a smaller layout sends the games on the screens it loses back to the rack.
+
+### Pictures are drawn at true size
+
+A 16:9 source shown on half of a 16:9 screen does not fill that half — it
+letterboxes, taking the full width and half the height, with black above and
+below. The wall draws it that way, so what you see is the size the picture will
+actually be. That is also why the quad box is the efficient layout: quartering a
+16:9 screen gives four cells that are themselves exactly 16:9, so four games fill
+the panel with no black bars at all, while 2 up on the same panel wastes half of
+it.
 
 ## Using it
 

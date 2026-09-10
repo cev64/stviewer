@@ -154,18 +154,12 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .tv-name em{font-style:normal; color:var(--muted); font-weight:600}
 .tv-head .seg{margin-left:auto; padding:2px; border-radius:7px}
 .tv-head .seg button{padding:3px 9px; font-size:12.5px; letter-spacing:.07em}
-.locked{
-  margin-left:auto; display:flex; align-items:center; gap:5px;
-  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.12em;
-  text-transform:uppercase; color:var(--muted);
-  border:1px solid var(--line); border-radius:6px; padding:3px 8px;
-}
 
 .screen{
-  aspect-ratio:16/9; background:var(--screen-bg); border-radius:7px;
+  aspect-ratio:16/9; background:var(--screen-line); border-radius:7px;
   border:1px solid var(--screen-line);
   box-shadow:0 0 0 4px color-mix(in srgb, var(--screen-bg) 82%, var(--line)), var(--shadow);
-  padding:5px; display:grid; gap:5px; overflow:hidden;
+  padding:0; display:grid; gap:1px; overflow:hidden;
 }
 .screen[data-layout="single"]{grid-template-columns:1fr}
 .screen[data-layout="split"]{grid-template-columns:1fr 1fr}
@@ -173,16 +167,22 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 
 /* ---------- a slot ---------- */
 .slot{
-  position:relative; container-type:inline-size; border-radius:4px; overflow:hidden;
-  min-width:0; min-height:0; display:flex; flex-direction:column;
-  background:var(--screen-empty); color:var(--screen-ink);
-  border:1px dashed color-mix(in srgb, var(--screen-line) 100%, transparent);
-  transition:border-color .12s, background .12s, box-shadow .12s;
-  cursor:pointer; user-select:none;
+  position:relative; min-width:0; min-height:0; overflow:hidden;
+  display:grid; place-items:center;
+  background:#04070a;                       /* the letterbox: glass with nothing lit on it */
+  color:var(--screen-ink); cursor:pointer;
 }
-.slot.filled{border-style:solid; border-color:transparent; background:#10161b}
-.slot.over{border-color:var(--accent); box-shadow:inset 0 0 0 2px var(--accent), 0 0 18px var(--accent-glow)}
-.slot.armable:not(.filled){border-color:color-mix(in srgb, var(--accent) 55%, transparent)}
+.pane{
+  position:relative; container-type:inline-size;
+  width:100%; aspect-ratio:16/9; max-height:100%;   /* a 16:9 source, never stretched to the cell */
+  display:flex; flex-direction:column; overflow:hidden; border-radius:3px;
+  background:var(--screen-empty);
+  border:1px dashed var(--screen-line);
+  transition:border-color .12s, background .12s, box-shadow .12s;
+}
+.slot.filled .pane{border-style:solid; border-color:transparent; background:#10161b}
+.slot.over .pane{border-color:var(--accent); box-shadow:inset 0 0 0 2px var(--accent), 0 0 18px var(--accent-glow)}
+.slot.armable:not(.filled) .pane{border-color:color-mix(in srgb, var(--accent) 55%, transparent)}
 .slot:focus-visible{outline:2px solid var(--accent); outline-offset:-3px}
 .slot.dragging{opacity:.35}
 
@@ -225,7 +225,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .slot-foot .net{color:var(--screen-ink); font-weight:500}
 .slot-foot .tm{margin-left:auto}
 
-.slot.rz{background:linear-gradient(150deg,#8f1414,#d92b2b 55%,#8f1414); border-color:transparent}
+.slot.rz .pane{background:linear-gradient(150deg,#8f1414,#d92b2b 55%,#8f1414); border-color:transparent}
 .slot.rz .rz-in{
   margin:auto; text-align:center; display:flex; flex-direction:column; gap:2px; padding:4px;
 }
@@ -403,7 +403,11 @@ body.dragging-now .chip, body.dragging-now .slot{cursor:grabbing}
       <article class="tv" data-size="65" data-tv="main">
         <div class="tv-head">
           <span class="tv-name">Main <em>&middot; 65&Prime;</em></span>
-          <span class="locked">Quad box &middot; locked</span>
+          <div class="seg" role="group" aria-label="Main TV layout">
+            <button type="button" data-mode="single" data-for="main" aria-pressed="false">1 up</button>
+            <button type="button" data-mode="split" data-for="main" aria-pressed="false">2 up</button>
+            <button type="button" data-mode="quad" data-for="main" aria-pressed="true">Quad</button>
+          </div>
         </div>
         <div class="screen" id="screen-main" data-layout="quad"></div>
       </article>
@@ -474,12 +478,19 @@ var db = null, dbDoc = null, lastPushed = "", writeTimer = null;
 
 /* every week and every window opens the same way: RedZone up top, the rest yours to fill */
 function blankPlan(){
-  return { topMode:"single", botMode:"single", slots:{ "top-1":{ k:"rz" } } };
+  return { topMode:"single", mainMode:"quad", botMode:"single", slots:{ "top-1":{ k:"rz" } } };
 }
+/* which slots a TV actually shows in a given layout */
+function slotsFor(tv, mode){
+  if(tv === "main") return mode==="single" ? ["main-1"] : mode==="split" ? ["main-1","main-2"] : SLOTS.main;
+  return mode==="split" ? SLOTS[tv] : [tv + "-1"];
+}
+function modeOf(tv){ return plan()[tv + "Mode"]; }
 function key(){ return state.week + "-" + state.slate; }
 function plan(){
   var k = key();
   if(!state.plans[k]) state.plans[k] = blankPlan();
+  if(!state.plans[k].mainMode) state.plans[k].mainMode = "quad";
   return state.plans[k];
 }
 function weekData(){
@@ -503,9 +514,9 @@ function rackGames(){
 }
 function activeSlots(){
   var p = plan();
-  return (p.topMode==="split" ? SLOTS.top : ["top-1"])
-    .concat(SLOTS.main)
-    .concat(p.botMode==="split" ? SLOTS.bot : ["bot-1"]);
+  return slotsFor("top", p.topMode)
+    .concat(slotsFor("main", p.mainMode))
+    .concat(slotsFor("bot", p.botMode));
 }
 
 /* ---------------- persistence ---------------- */
@@ -589,10 +600,12 @@ function clearSlot(slot){
   var p = plan();
   if(p.slots[slot]){ delete p.slots[slot]; save(); render(); }
 }
-function setMode(which, mode){
+function setMode(tv, mode){
   var p = plan();
-  if(which==="top"){ if(p.topMode===mode) return; p.topMode = mode; if(mode==="single") delete p.slots["top-2"]; }
-  else { if(p.botMode===mode) return; p.botMode = mode; if(mode==="single") delete p.slots["bot-2"]; }
+  if(p[tv + "Mode"] === mode) return;
+  p[tv + "Mode"] = mode;
+  var keep = slotsFor(tv, mode);            /* games on screens this layout drops go back to the rack */
+  SLOTS[tv].forEach(function(id){ if(keep.indexOf(id) < 0) delete p.slots[id]; });
   save(); render();
 }
 function resetWall(){ state.plans[key()] = blankPlan(); save(); render(); }
@@ -637,14 +650,15 @@ function slotEl(id){
 
   if(armed && !item) el.classList.add("armable");
 
+  var inner;
   if(!item){
     el.setAttribute("aria-label", SLOT_LABEL[id] + ", empty");
-    el.innerHTML = '<div class="slot-empty"><span class="plus">+</span><span class="id">' +
+    inner = '<div class="slot-empty"><span class="plus">+</span><span class="id">' +
       SLOT_LABEL[id] + '</span></div>';
   } else if(item.k === "rz"){
     el.classList.add("rz");
     el.setAttribute("aria-label", SLOT_LABEL[id] + ", NFL RedZone");
-    el.innerHTML =
+    inner =
       '<button class="slot-x" type="button" aria-label="Clear ' + SLOT_LABEL[id] + '">×</button>' +
       '<div class="rz-in"><div class="rz-t">RedZone</div><div class="rz-s">Every touchdown</div></div>';
   } else {
@@ -652,7 +666,7 @@ function slotEl(id){
     if(!g){ delete p.slots[id]; return slotEl(id); }
     var ta = TEAMS[g.away], th = TEAMS[g.home];
     el.setAttribute("aria-label", SLOT_LABEL[id] + ", " + ta.loc + " " + ta.name + " at " + th.loc + " " + th.name);
-    el.innerHTML =
+    inner =
       '<button class="slot-x" type="button" aria-label="Clear ' + SLOT_LABEL[id] + '">×</button>' +
       '<div class="matchup">' +
         '<div class="side" style="--tc:' + ta.color + '"><span class="abbr">' + g.away + '</span><span class="role">AWAY</span></div>' +
@@ -662,6 +676,7 @@ function slotEl(id){
       '<div class="slot-foot"><span class="net">' + (g.net || "TBD") + '</span>' +
         '<span class="tm">' + (g.time || "Flex") + '</span></div>';
   }
+  el.innerHTML = '<div class="pane">' + inner + '</div>';
   return el;
 }
 
@@ -719,20 +734,18 @@ function render(){
   document.getElementById("slateLate").setAttribute("aria-pressed", String(state.slate==="late"));
 
   /* tv layout toggles */
-  document.getElementById("screen-top").setAttribute("data-layout", p.topMode);
-  document.getElementById("screen-bot").setAttribute("data-layout", p.botMode);
   var toggles = document.querySelectorAll('.tv-head .seg button');
   for(var i=0;i<toggles.length;i++){
-    var b = toggles[i], mine = b.getAttribute("data-for")==="top" ? p.topMode : p.botMode;
-    b.setAttribute("aria-pressed", String(b.getAttribute("data-mode")===mine));
+    var b = toggles[i];
+    b.setAttribute("aria-pressed", String(b.getAttribute("data-mode") === modeOf(b.getAttribute("data-for"))));
   }
 
   /* screens */
   ["top","main","bot"].forEach(function(tv){
-    var host = document.getElementById("screen-" + tv);
-    var ids = tv==="main" ? SLOTS.main : (( tv==="top" ? p.topMode : p.botMode)==="split" ? SLOTS[tv] : [tv+"-1"]);
+    var host = document.getElementById("screen-" + tv), mode = modeOf(tv);
+    host.setAttribute("data-layout", mode);
     host.innerHTML = "";
-    ids.forEach(function(id){ host.appendChild(slotEl(id)); });
+    slotsFor(tv, mode).forEach(function(id){ host.appendChild(slotEl(id)); });
   });
 
   /* tally */
@@ -819,7 +832,7 @@ function beginDrag(x, y){
   disarmQuietly();
   drag.el.classList.add("dragging");
   document.body.classList.add("dragging-now");
-  var r = drag.el.getBoundingClientRect();
+  var r = (drag.el.querySelector(".pane") || drag.el).getBoundingClientRect();
   var g = drag.el.cloneNode(true);
   g.className = drag.el.className.replace(/\b(dragging|armed|over|placed)\b/g, "") + " ghost";
   g.removeAttribute("id");
@@ -952,7 +965,7 @@ document.addEventListener("dragstart", function(e){ e.preventDefault(); });
 document.addEventListener("click", function(e){
   if(suppressClick){ suppressClick = false; return; }
   var x = e.target.closest ? e.target.closest(".slot-x") : null;
-  if(x){ e.stopPropagation(); clearSlot(x.parentNode.getAttribute("data-slot")); return; }
+  if(x){ e.stopPropagation(); clearSlot(x.closest(".slot").getAttribute("data-slot")); return; }
 
   var el = closestDraggable(e.target);
   if(!el) return;
