@@ -343,6 +343,20 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 }
 .rack-foot b{color:var(--ink-2); font-weight:600}
 .empty-rack{padding:26px 12px; text-align:center; color:var(--muted); font-size:13px}
+
+/* ---------- the thing under your finger ---------- */
+.chip, .slot{
+  -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none; touch-action:manipulation;
+}
+.ghost{
+  position:fixed; top:0; left:0; z-index:100; margin:0;
+  pointer-events:none; transition:none; opacity:.95;
+  box-shadow:0 16px 40px rgba(0,0,0,.45), 0 0 0 1px var(--accent);
+  border-radius:8px; overflow:hidden;
+}
+body.dragging-now{cursor:grabbing}
+body.dragging-now .chip, body.dragging-now .slot{cursor:grabbing}
 </style>
 
 <header class="bar">
@@ -409,7 +423,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
     <div class="wall-foot">
       <div class="tally"><b id="tallyOn">0</b> <span>of</span> <b id="tallyCap">6</b> <span>screens live</span></div>
       <div class="acts">
-        <button class="btn" type="button" id="btnClear">Clear wall</button>
+        <button class="btn" type="button" id="btnReset">Reset wall</button>
         <button class="btn primary" type="button" id="btnFill">Auto&#8209;fill</button>
       </div>
     </div>
@@ -425,7 +439,8 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
     </div>
     <div class="rack-body" id="rack"></div>
     <div class="rack-foot">
-      Drag a game onto a screen, or tap it and then tap the screen. Drag between screens to swap, or back here to pull it.
+      Drag a game onto a screen — press and hold first on a touchscreen — or tap it and then tap the screen.
+      Drag between screens to swap, or back here to pull it.
       <b>Sunday Ticket</b> carries every game listed; the network shown is the producing broadcast.
     </div>
   </aside>
@@ -457,8 +472,9 @@ var state = { week:1, slate:"early", plans:{} };
 var armed = null;                 // {k:"g",id} | {k:"rz"} | {k:"slot",slot}
 var db = null, dbDoc = null, lastPushed = "", writeTimer = null;
 
+/* every week and every window opens the same way: RedZone up top, the rest yours to fill */
 function blankPlan(){
-  return { topMode:"single", botMode:"single", slots:{} };
+  return { topMode:"single", botMode:"single", slots:{ "top-1":{ k:"rz" } } };
 }
 function key(){ return state.week + "-" + state.slate; }
 function plan(){
@@ -579,7 +595,7 @@ function setMode(which, mode){
   else { if(p.botMode===mode) return; p.botMode = mode; if(mode==="single") delete p.slots["bot-2"]; }
   save(); render();
 }
-function clearWall(){ state.plans[key()] = { topMode:plan().topMode, botMode:plan().botMode, slots:{} }; save(); render(); }
+function resetWall(){ state.plans[key()] = blankPlan(); save(); render(); }
 function autoFill(){
   var p = plan(), open = activeSlots().filter(function(s){ return !p.slots[s]; });
   if(!open.length) return;
@@ -590,6 +606,12 @@ function autoFill(){
 }
 
 /* ---------------- arming (tap to place) ---------------- */
+function disarmQuietly(){
+  armed = null;
+  document.getElementById("armed").classList.remove("on");
+  var lit = document.querySelectorAll(".chip.armed, .slot.armable");
+  for(var i=0;i<lit.length;i++) lit[i].classList.remove("armed","armable");
+}
 function setArmed(item){
   armed = item;
   var bar = document.getElementById("armed");
@@ -621,7 +643,6 @@ function slotEl(id){
       SLOT_LABEL[id] + '</span></div>';
   } else if(item.k === "rz"){
     el.classList.add("rz");
-    el.setAttribute("draggable","true");
     el.setAttribute("aria-label", SLOT_LABEL[id] + ", NFL RedZone");
     el.innerHTML =
       '<button class="slot-x" type="button" aria-label="Clear ' + SLOT_LABEL[id] + '">×</button>' +
@@ -630,7 +651,6 @@ function slotEl(id){
     var g = gameById(item.id);
     if(!g){ delete p.slots[id]; return slotEl(id); }
     var ta = TEAMS[g.away], th = TEAMS[g.home];
-    el.setAttribute("draggable","true");
     el.setAttribute("aria-label", SLOT_LABEL[id] + ", " + ta.loc + " " + ta.name + " at " + th.loc + " " + th.name);
     el.innerHTML =
       '<button class="slot-x" type="button" aria-label="Clear ' + SLOT_LABEL[id] + '">×</button>' +
@@ -648,7 +668,6 @@ function slotEl(id){
 function chipEl(kind, g){
   var el = document.createElement("div");
   el.className = "chip";
-  el.setAttribute("draggable","true");
   el.setAttribute("tabindex","0");
   el.setAttribute("role","button");
 
@@ -773,51 +792,165 @@ function closestDraggable(t){
   return null;
 }
 
-document.addEventListener("dragstart", function(e){
-  var el = closestDraggable(e.target);
-  if(!el || el.getAttribute("draggable") !== "true") return;
-  var p = payloadFrom(el);
-  if(!p || (p.k === "slot" && !plan().slots[p.slot])) { e.preventDefault(); return; }
-  e.dataTransfer.effectAllowed = "move";
-  try{ e.dataTransfer.setData("text/plain", JSON.stringify(p)); }catch(err){}
-  el.classList.add("dragging");
-  setArmed(null);
-});
-document.addEventListener("dragend", function(e){
-  var el = closestDraggable(e.target);
-  if(el) el.classList.remove("dragging");
+/* ---------------- dragging: pointer-based, so mouse, pen and touch all work ----------------
+   Native HTML5 drag never fires on touch, so the wall rolls its own: a threshold drag
+   for mouse and pen, a short press-and-hold for fingers (so the rack still scrolls). */
+var drag = null, suppressClick = false;
+
+function dropTargetAt(x, y){
+  var el = document.elementFromPoint(x, y);
+  if(!el || !el.closest) return null;
+  var slot = el.closest(".slot");
+  if(slot) return { kind:"slot", el:slot };
+  var rack = el.closest("#rack");
+  if(rack) return { kind:"rack", el:rack };
+  return null;
+}
+function clearHighlights(){
   var over = document.querySelectorAll(".over");
   for(var i=0;i<over.length;i++) over[i].classList.remove("over");
+}
+function moveGhost(x, y){
+  if(drag && drag.ghost) drag.ghost.style.transform =
+    "translate(" + (x - drag.offX) + "px," + (y - drag.offY) + "px) rotate(-1.5deg)";
+}
+function beginDrag(x, y){
+  drag.active = true;
+  disarmQuietly();
+  drag.el.classList.add("dragging");
+  document.body.classList.add("dragging-now");
+  var r = drag.el.getBoundingClientRect();
+  var g = drag.el.cloneNode(true);
+  g.className = drag.el.className.replace(/\b(dragging|armed|over|placed)\b/g, "") + " ghost";
+  g.removeAttribute("id");
+  g.style.width = r.width + "px";
+  g.style.height = r.height + "px";
+  document.body.appendChild(g);
+  drag.ghost = g;
+  drag.offX = x - r.left;
+  drag.offY = y - r.top;
+  moveGhost(x, y);
+}
+function endDrag(commit, x, y){
+  if(!drag) return false;
+  var d = drag; drag = null;
+  if(d.timer) clearTimeout(d.timer);
+  if(d.ghost && d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+  d.el.classList.remove("dragging");
+  document.body.classList.remove("dragging-now");
+  clearHighlights();
+  if(!d.active) return false;              /* never crossed the threshold — let it be a tap */
+  if(x == null || y == null) { render(); return true; }
+  var t = commit ? dropTargetAt(x, y) : null;
+  if(t && t.kind === "slot") place(d.item, t.el.getAttribute("data-slot"));
+  else if(t && t.kind === "rack" && d.item.k === "slot") clearSlot(d.item.slot);
+  else render();
+  return true;
+}
+
+/* what, if anything, this gesture picks up */
+function pickup(target){
+  if(target.closest && target.closest(".slot-x")) return null;
+  var el = closestDraggable(target);
+  if(!el) return null;
+  var p = payloadFrom(el);
+  if(!p) return null;
+  if(p.k === "slot" && !plan().slots[p.slot]) return null;  /* empty screens hold nothing */
+  el._payload = p;
+  return el;
+}
+function newDrag(el, x, y, touch){
+  return { item:el._payload, el:el, x0:x, y0:y, lastX:x, lastY:y,
+           active:false, touch:touch, ready:!touch, ghost:null, timer:null };
+}
+function trackTo(x, y){
+  moveGhost(x, y);
+  clearHighlights();
+  var t = dropTargetAt(x, y);
+  if(t) t.el.classList.add("over");
+}
+function abortDrag(){
+  if(drag && drag.timer) clearTimeout(drag.timer);
+  if(drag && drag.active) endDrag(false);
+  else drag = null;
+}
+function finishDrag(x, y){
+  if(endDrag(true, x, y)){
+    suppressClick = true;
+    setTimeout(function(){ suppressClick = false; }, 60);
+  }
+}
+
+document.addEventListener("pointerdown", function(e){
+  if(e.button || e.pointerType === "touch") return;   /* fingers take the touch path below */
+  var el = pickup(e.target);
+  if(!el) return;
+  drag = newDrag(el, e.clientX, e.clientY, false);
 });
-document.addEventListener("dragover", function(e){
-  var slot = e.target.closest ? e.target.closest(".slot") : null;
-  var rack = e.target.closest ? e.target.closest("#rack") : null;
-  if(slot || rack){ e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
+document.addEventListener("pointermove", function(e){
+  if(!drag || drag.touch) return;
+  drag.lastX = e.clientX; drag.lastY = e.clientY;
+  if(!drag.active){
+    if(Math.abs(e.clientX - drag.x0) + Math.abs(e.clientY - drag.y0) < 6) return;
+    beginDrag(e.clientX, e.clientY);
+  }
+  if(e.cancelable) e.preventDefault();
+  trackTo(e.clientX, e.clientY);
+}, { passive:false });
+document.addEventListener("pointerup", function(e){
+  if(!drag || drag.touch) return;
+  finishDrag(e.clientX, e.clientY);
 });
-document.addEventListener("dragenter", function(e){
-  var slot = e.target.closest ? e.target.closest(".slot") : null;
-  if(slot) slot.classList.add("over");
-  var rack = e.target.closest ? e.target.closest("#rack") : null;
-  if(rack) rack.classList.add("over");
-});
-document.addEventListener("dragleave", function(e){
-  var slot = e.target.closest ? e.target.closest(".slot") : null;
-  if(slot && !slot.contains(e.relatedTarget)) slot.classList.remove("over");
-  var rack = e.target.closest ? e.target.closest("#rack") : null;
-  if(rack && !rack.contains(e.relatedTarget)) rack.classList.remove("over");
-});
-document.addEventListener("drop", function(e){
-  var raw = "";
-  try{ raw = e.dataTransfer.getData("text/plain"); }catch(err){}
-  if(!raw) return;
-  var item; try{ item = JSON.parse(raw); }catch(err){ return; }
-  var slot = e.target.closest ? e.target.closest(".slot") : null;
-  var rack = e.target.closest ? e.target.closest("#rack") : null;
-  if(slot){ e.preventDefault(); place(item, slot.getAttribute("data-slot")); return; }
-  if(rack && item.k === "slot"){ e.preventDefault(); clearSlot(item.slot); }
+document.addEventListener("pointercancel", function(e){
+  if(drag && !drag.touch) finishDrag(drag.lastX, drag.lastY);
 });
 
+/* Touch gets its own path on purpose. Chrome cancels the pointer stream the moment a
+   finger moves, because it has already claimed the gesture as a scroll, so pointer
+   events can never carry a touch drag. Touch events survive it: a press-and-hold arms
+   the drag, and the first move preventDefaults, which is what actually holds the page
+   still. Move before the hold lands and it stays an ordinary scroll. */
+document.addEventListener("touchstart", function(e){
+  if(e.touches.length !== 1){ if(drag) abortDrag(); return; }
+  var el = pickup(e.target);
+  if(!el) return;
+  var t = e.touches[0];
+  drag = newDrag(el, t.clientX, t.clientY, true);
+  drag.timer = setTimeout(function(){
+    if(drag){ drag.ready = true; beginDrag(drag.x0, drag.y0); }
+  }, 230);
+}, { passive:true });
+document.addEventListener("touchmove", function(e){
+  if(!drag || !drag.touch) return;
+  var t = e.touches[0];
+  if(!t) return;
+  if(!drag.active){
+    if(!drag.ready){
+      /* moved before the hold landed — they wanted to scroll */
+      if(Math.abs(t.clientX - drag.x0) + Math.abs(t.clientY - drag.y0) > 12) abortDrag();
+      return;
+    }
+    beginDrag(t.clientX, t.clientY);
+  }
+  if(e.cancelable) e.preventDefault();
+  drag.lastX = t.clientX; drag.lastY = t.clientY;
+  trackTo(t.clientX, t.clientY);
+}, { passive:false });
+document.addEventListener("touchend", function(e){
+  if(!drag || !drag.touch) return;
+  var t = e.changedTouches[0];
+  finishDrag(drag.lastX != null ? drag.lastX : (t ? t.clientX : 0),
+             drag.lastY != null ? drag.lastY : (t ? t.clientY : 0));
+});
+document.addEventListener("touchcancel", function(e){
+  if(drag && drag.touch) finishDrag(drag.lastX, drag.lastY);
+});
+/* the hold gesture must not raise a context menu or the browser's own drag */
+document.addEventListener("contextmenu", function(e){ if(drag && drag.touch) e.preventDefault(); });
+document.addEventListener("dragstart", function(e){ e.preventDefault(); });
+
 document.addEventListener("click", function(e){
+  if(suppressClick){ suppressClick = false; return; }
   var x = e.target.closest ? e.target.closest(".slot-x") : null;
   if(x){ e.stopPropagation(); clearSlot(x.parentNode.getAttribute("data-slot")); return; }
 
@@ -855,7 +988,7 @@ document.addEventListener("keydown", function(e){
 
 /* ---------------- controls ---------------- */
 document.getElementById("armedX").addEventListener("click", function(){ setArmed(null); });
-document.getElementById("btnClear").addEventListener("click", clearWall);
+document.getElementById("btnReset").addEventListener("click", resetWall);
 document.getElementById("btnFill").addEventListener("click", autoFill);
 document.getElementById("wkPrev").addEventListener("click", function(){ if(state.week>1){ state.week--; setArmed(null); render(); } });
 document.getElementById("wkNext").addEventListener("click", function(){ if(state.week<18){ state.week++; setArmed(null); render(); } });
@@ -893,15 +1026,6 @@ for(var mi=0; mi<modeBtns.length; mi++){
     best = WEEKS[i].week;
   }
   state.week = best;
-
-  /* first visit: show the wall doing its job rather than eight empty boxes */
-  if(!state.plans[key()]){
-    var p = plan(), r = rackGames(), pool = r.fixed.concat(r.flex);
-    p.botMode = "split";
-    var seats = ["main-1","main-2","main-3","main-4","top-1"];
-    for(var s=0; s<seats.length && s<pool.length; s++) p.slots[seats[s]] = { k:"g", id:pool[s].id };
-    p.slots["bot-1"] = { k:"rz" };
-  }
 
   render();
   connectDb();

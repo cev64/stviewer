@@ -19,13 +19,17 @@ the top of the rack and can take any of those slots in either window.
 
 ## Using it
 
+Every week and window opens the same way: **RedZone on the top 40″, every other
+screen blank.** Build from there.
+
 - **Drag** a game from the rack onto a screen. Drag between screens to swap them,
-  or drag one back to the rack to pull it.
-- **Or tap** a game, then tap a screen — the same flow works on a phone, where
-  HTML5 drag does not.
+  or drag one back to the rack to pull it. On a touchscreen, press and hold
+  briefly to pick a game up — a quick swipe still scrolls the page.
+- **Or tap** a game, then tap a screen.
 - **Keyboard:** tab to a game or a screen, `Enter` to pick up or place, `Delete`
   to clear a screen, `Esc` to cancel.
-- **Auto-fill** seats the unassigned games starting with the 65″ quad.
+- **Auto-fill** seats the unassigned games starting with the 65″ quad, and
+  **Reset wall** puts the window back to RedZone-on-top.
 
 Every week × window is saved independently, so Week 4's 4:00 wall does not
 disturb Week 4's 1:00 wall.
