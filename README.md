@@ -40,9 +40,12 @@ Every week and window opens the same way: **RedZone on the top 40″, every othe
 screen blank.** Build from there.
 
 - **Drag** a game from the rack onto a screen. Drag between screens to swap them,
-  or drag one back to the rack to pull it. On a touchscreen, press and hold
-  briefly to pick a game up — a quick swipe still scrolls the page.
+  or drag one back to the rack to pull it. On a touchscreen, press and hold for
+  about half a second to pick a game up — it buzzes and lifts so you can tell.
+  Anything shorter stays a scroll.
 - **Or tap** a game, then tap a screen.
+- **Tap a game already on a screen** to cover it with a red ✕. The ✕ removes it,
+  the red around the ✕ backs out, and tapping a different screen swaps the two.
 - **Keyboard:** tab to a game or a screen, `Enter` to pick up or place, `Delete`
   to clear a screen, `Esc` to cancel.
 - **Auto-fill** seats the unassigned games starting with the 65″ quad, and

@@ -218,6 +218,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .slot.armable:not(.filled) .pane{border-color:color-mix(in srgb, var(--accent) 55%, transparent)}
 .slot:focus-visible{outline:2px solid var(--accent); outline-offset:-3px}
 .slot.dragging{opacity:.35}
+.chip.dragging, .slot.dragging{outline:1px dashed var(--accent); outline-offset:-2px}
 
 .slot-empty{
   margin:auto; display:flex; flex-direction:column; align-items:center; gap:3px;
@@ -270,6 +271,30 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .slot.rz .rz-s{
   font-family:"IBM Plex Mono",monospace; font-size:clamp(6px,2.7cqw,10px);
   letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.8);
+}
+/* Tapping a game on a screen covers it: the ✕ removes it, the red around the ✕
+   cancels, and the game still reads through the tint so a swap can be aimed. */
+.slot-cover{
+  position:absolute; inset:0; z-index:4;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:clamp(2px,1.5cqw,6px);
+  background:color-mix(in srgb, var(--rz) 66%, transparent);
+  animation:coverIn .12s ease-out;
+}
+@keyframes coverIn{from{opacity:0}to{opacity:1}}
+@keyframes lift{from{transform-origin:center; filter:brightness(1.4)}to{filter:none}}
+.cover-x{
+  width:clamp(26px,30cqw,58px); height:clamp(26px,30cqw,58px);
+  border-radius:50%; background:#fff; color:#b81f1f;
+  display:grid; place-items:center; line-height:1;
+  font-family:"Barlow",sans-serif; font-size:clamp(17px,19cqw,36px); font-weight:600;
+  box-shadow:0 3px 14px rgba(0,0,0,.45);
+}
+.cover-x:active{transform:scale(.94)}
+.cover-hint{
+  font-family:"IBM Plex Mono",monospace; font-size:clamp(6px,2.9cqw,10px);
+  letter-spacing:.14em; text-transform:uppercase; color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.55);
 }
 .slot-x{
   position:absolute; top:2px; right:2px; z-index:3; width:clamp(14px,7cqw,22px); height:clamp(14px,7cqw,22px);
@@ -383,7 +408,7 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
   -webkit-touch-callout:none; touch-action:manipulation;
 }
 .ghost{
-  position:fixed; top:0; left:0; z-index:100; margin:0;
+  position:fixed; top:0; left:0; z-index:100; margin:0; animation:lift .12s ease-out;
   pointer-events:none; transition:none; opacity:.95;
   box-shadow:0 16px 40px rgba(0,0,0,.45), 0 0 0 1px var(--accent);
   border-radius:8px; overflow:hidden;
@@ -489,7 +514,7 @@ body.dragging-now .chip, body.dragging-now .slot{cursor:grabbing}
     <div class="rack-body" id="rack"></div>
     <div class="rack-foot">
       Drag a game onto a screen — press and hold first on a touchscreen — or tap it and then tap the screen.
-      Drag between screens to swap, or back here to pull it.
+      Tap a game already on a screen to remove it or swap it somewhere else.
       <b>Sunday Ticket</b> carries every game listed; the network shown is the producing broadcast.
     </div>
   </aside>
@@ -704,6 +729,8 @@ function slotEl(id){
   el.setAttribute("role","button");
 
   if(armed && !item) el.classList.add("armable");
+  var picked = !!(item && armed && armed.k === "slot" && armed.slot === id);
+  if(picked) el.classList.add("picked");
 
   var inner;
   if(!item){
@@ -730,6 +757,12 @@ function slotEl(id){
       '</div>' +
       '<div class="slot-foot"><span class="net">' + (g.net || "TBD") + '</span>' +
         '<span class="tm">' + (g.time || "Flex") + '</span></div>';
+  }
+  if(picked){
+    inner += '<div class="slot-cover">' +
+        '<button class="cover-x" type="button" aria-label="Remove from ' + SLOT_LABEL[id] + '">&#10005;</button>' +
+        '<span class="cover-hint">Remove</span>' +
+      '</div>';
   }
   el.innerHTML = '<div class="pane">' + inner + '</div>';
   return el;
@@ -917,7 +950,7 @@ function endDrag(commit, x, y){
   document.body.classList.remove("dragging-now");
   clearHighlights();
   if(!d.active) return false;              /* never crossed the threshold — let it be a tap */
-  if(x == null || y == null) { render(); return true; }
+  if(x == null || y == null) return true;
   var t = commit ? dropTargetAt(x, y) : null;
   if(t && t.kind === "slot") place(d.item, t.el.getAttribute("data-slot"));
   else if(t && t.kind === "rack" && d.item.k === "slot") clearSlot(d.item.slot);
@@ -927,7 +960,7 @@ function endDrag(commit, x, y){
 
 /* what, if anything, this gesture picks up */
 function pickup(target){
-  if(target.closest && target.closest(".slot-x")) return null;
+  if(target.closest && (target.closest(".slot-x") || target.closest(".cover-x"))) return null;
   var el = closestDraggable(target);
   if(!el) return null;
   var p = payloadFrom(el);
@@ -937,7 +970,7 @@ function pickup(target){
   return el;
 }
 function newDrag(el, x, y, touch){
-  return { item:el._payload, el:el, x0:x, y0:y, lastX:x, lastY:y,
+  return { item:el._payload, el:el, x0:x, y0:y, lastX:x, lastY:y, tid:null, moved:false,
            active:false, touch:touch, ready:!touch, ghost:null, timer:null };
 }
 function trackTo(x, y){
@@ -947,8 +980,9 @@ function trackTo(x, y){
   if(t) t.el.classList.add("over");
 }
 function abortDrag(){
-  if(drag && drag.timer) clearTimeout(drag.timer);
-  if(drag && drag.active) endDrag(false);
+  if(!drag) return;
+  clearTimeout(drag.timer);
+  if(drag.active) endDrag(false, null, null);
   else drag = null;
 }
 function finishDrag(x, y){
@@ -987,47 +1021,72 @@ document.addEventListener("pointercancel", function(e){
    events can never carry a touch drag. Touch events survive it: a press-and-hold arms
    the drag, and the first move preventDefaults, which is what actually holds the page
    still. Move before the hold lands and it stays an ordinary scroll. */
+/* Touch is tracked by identifier: e.touches[0] is not necessarily OUR finger, and
+   mistaking someone else's for ours used to leave a drag stuck active, which
+   preventDefaults every later touchmove and locks scrolling until a reload. */
+function trackedTouch(list, id){
+  for(var i=0;i<list.length;i++) if(list[i].identifier === id) return list[i];
+  return null;
+}
 document.addEventListener("touchstart", function(e){
-  if(e.touches.length !== 1){ if(drag) abortDrag(); return; }
+  if(drag) abortDrag();                      /* a second finger cancels any drag in progress */
+  if(e.touches.length !== 1) return;
   var el = pickup(e.target);
   if(!el) return;
   var t = e.touches[0];
   drag = newDrag(el, t.clientX, t.clientY, true);
+  drag.tid = t.identifier;
   drag.timer = setTimeout(function(){
-    if(drag){ drag.ready = true; beginDrag(drag.x0, drag.y0); }
-  }, 230);
+    if(!drag || drag.active) return;
+    drag.ready = true;
+    beginDrag(drag.x0, drag.y0);
+    if(navigator.vibrate) { try{ navigator.vibrate(14); }catch(err){} }
+  }, 450);
 }, { passive:true });
+
 document.addEventListener("touchmove", function(e){
   if(!drag || !drag.touch) return;
-  var t = e.touches[0];
-  if(!t) return;
+  var t = trackedTouch(e.touches, drag.tid);
+  if(!t){ abortDrag(); return; }             /* our finger is gone — never hold the page hostage */
+  var dist = Math.abs(t.clientX - drag.x0) + Math.abs(t.clientY - drag.y0);
   if(!drag.active){
-    if(!drag.ready){
-      /* moved before the hold landed — they wanted to scroll */
-      if(Math.abs(t.clientX - drag.x0) + Math.abs(t.clientY - drag.y0) > 12) abortDrag();
-      return;
-    }
+    /* moved before the hold landed — they wanted to scroll, so let them */
+    if(!drag.ready){ if(dist > 10) abortDrag(); return; }
     beginDrag(t.clientX, t.clientY);
   }
-  if(e.cancelable) e.preventDefault();
+  if(dist > 10) drag.moved = true;
+  if(drag.ghost && e.cancelable) e.preventDefault();
   drag.lastX = t.clientX; drag.lastY = t.clientY;
   trackTo(t.clientX, t.clientY);
 }, { passive:false });
+
 document.addEventListener("touchend", function(e){
   if(!drag || !drag.touch) return;
-  var t = e.changedTouches[0];
-  finishDrag(drag.lastX != null ? drag.lastX : (t ? t.clientX : 0),
-             drag.lastY != null ? drag.lastY : (t ? t.clientY : 0));
+  if(!trackedTouch(e.changedTouches, drag.tid)) return;   /* not our finger */
+  /* held it but never moved: that is a tap, so let it arm the game instead */
+  if(drag.active && !drag.moved){ abortDrag(); render(); return; }
+  finishDrag(drag.lastX, drag.lastY);
 });
 document.addEventListener("touchcancel", function(e){
-  if(drag && drag.touch) finishDrag(drag.lastX, drag.lastY);
+  if(drag && drag.touch) abortDrag();
 });
+/* if the page is already scrolling, no hold may turn into a drag */
+window.addEventListener("scroll", function(){ if(drag && !drag.active) abortDrag(); }, { passive:true });
+/* nothing may survive the page going away underneath a held finger */
+window.addEventListener("blur", function(){ if(drag) abortDrag(); });
+document.addEventListener("visibilitychange", function(){ if(document.hidden && drag) abortDrag(); });
 /* the hold gesture must not raise a context menu or the browser's own drag */
 document.addEventListener("contextmenu", function(e){ if(drag && drag.touch) e.preventDefault(); });
 document.addEventListener("dragstart", function(e){ e.preventDefault(); });
 
 document.addEventListener("click", function(e){
   if(suppressClick){ suppressClick = false; return; }
+
+  var cx = e.target.closest ? e.target.closest(".cover-x") : null;
+  if(cx){ e.stopPropagation(); var cs = cx.closest(".slot"); disarmQuietly(); clearSlot(cs.getAttribute("data-slot")); return; }
+  var cov = e.target.closest ? e.target.closest(".slot-cover") : null;
+  if(cov){ setArmed(null); return; }          /* the red around the button backs out */
+
   var x = e.target.closest ? e.target.closest(".slot-x") : null;
   if(x){ e.stopPropagation(); clearSlot(x.closest(".slot").getAttribute("data-slot")); return; }
 
