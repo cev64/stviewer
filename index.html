@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Plan the NFL Sunday TV wall: drag games and RedZone onto a 40-inch, 65-inch quad box, and 40-inch stack for the 1:00 and 4:00 windows of every 2026 regular-season week.">
+<meta name="description" content="Plan the NFL Sunday TV wall: drag games and RedZone onto a 40-inch, a 65-inch quad box, and a pair of 32-inch sets for the 1:00 and 4:00 windows of every 2026 regular-season week.">
 <title>Sunday Wall</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -141,50 +141,38 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .armed .x:hover{background:rgba(0,0,0,.22)}
 
 /* ---------- the wall ---------- */
-/* One scale runs the whole room: every panel's width is its diagonal against the 65".
-   With the laptop out, the pair has to share the column, so the base shrinks to fit. */
+/* One scale runs the whole room: every panel's width is its diagonal against the 65". */
 .wall{
-  --gap:26px;
   --w65:min(760px, 100%);
-  position:relative; display:flex; align-items:flex-end; justify-content:center; gap:var(--gap);
-}
-.wall.has-lap{ --w65:min(760px, calc((100% - var(--gap)) / 1.323)); }
-@media (max-width:700px){
-  .wall, .wall.has-lap{ flex-direction:column; align-items:center; --w65:min(760px,100%); }
+  position:relative; display:flex; align-items:flex-end; justify-content:center;
 }
 .stack{
   position:relative; width:var(--w65); min-width:0;
   display:flex; flex-direction:column; align-items:center; gap:16px;
 }
-.stack::before{ /* the wall mount the three TVs hang off */
+.stack::before{ /* the wall mount the sets hang off */
   content:""; position:absolute; top:30px; bottom:30px; left:50%; width:5px; margin-left:-2.5px;
   background:var(--line-soft); border-radius:3px; z-index:0;
 }
 .tv{position:relative; z-index:1; width:var(--w); max-width:100%}
 .tv[data-size="65"]{--w:100%}                        /* the stack IS the 65" width */
 .tv[data-size="40"]{--w:61.54%}                     /* 40 / 65 */
-.tv[data-size="21"]{--w:calc(var(--w65) * .3231)}   /* 21 / 65, measured off the wall */
+.tv[data-size="32"]{--w:calc(var(--w65) * .4923)}   /* 32 / 65, measured off the 65" because
+                                                       the pair shares a row of its own */
 
-/* the laptop sits on the table, not on the mount, so it gets a lid and a deck */
-.laptop .screen{border-radius:5px 5px 2px 2px}
-.laptop .deck{
-  position:relative; height:9px; margin:2px 0 0;
-  background:linear-gradient(180deg, var(--line), var(--line-soft));
-  clip-path:polygon(0 0, 100% 0, 99% 100%, 1% 100%);
-  border-radius:0 0 4px 4px;
+/* The two 32s hang under the 65", centred on it as a pair and on the mount when one is out.
+   Two 32" panels are 98.46% of a 65" across, so the pair fills the 65"'s footprint and the
+   1.54% left over is the gap between them — about an inch of bezel at this scale. */
+.pair{
+  width:100%; display:flex; align-items:flex-end; justify-content:center;
+  gap:calc(var(--w65) * .0154);
 }
-.laptop .deck span{
-  position:absolute; left:50%; bottom:0; width:16%; height:3px; margin-left:-8%;
-  background:var(--sunk); border-radius:2px 2px 0 0;
-}
-.lap-note{
-  margin-top:7px; text-align:center;
-  font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.11em;
-  text-transform:uppercase; color:var(--muted);
-}
+.pair .tv{flex:none}   /* true to their diagonals, never shrunk to fit the row */
 
 .tv-head{
   display:flex; align-items:center; gap:10px; margin-bottom:6px; padding:0 2px;
+  /* a 32" on a phone is too narrow for a name and a layout group on one line */
+  flex-wrap:wrap; row-gap:3px;
 }
 .tv-name{
   font-family:"Barlow Condensed",sans-serif; font-weight:700; font-size:14px;
@@ -193,6 +181,11 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .tv-name em{font-style:normal; color:var(--muted); font-weight:600}
 .tv-head .seg{margin-left:auto; padding:2px; border-radius:7px}
 .tv-head .seg button{padding:3px 9px; font-size:12.5px; letter-spacing:.07em}
+@media (max-width:560px){
+  .tv-head{gap:7px}
+  .tv-name{font-size:12.5px; letter-spacing:.1em}
+  .tv-head .seg button{padding:3px 7px; font-size:11.5px}
+}
 
 .screen{
   aspect-ratio:16/9; background:var(--screen-line); border-radius:7px;
@@ -485,32 +478,36 @@ body.dragging-now .chip, body.dragging-now .slot{cursor:grabbing}
         <div class="screen" id="screen-main" data-layout="quad"></div>
       </article>
 
-      <article class="tv" data-size="40" data-tv="bot">
-        <div class="tv-head">
-          <span class="tv-name">Bottom <em>&middot; 40&Prime;</em></span>
-          <div class="seg" role="group" aria-label="Bottom TV layout">
-            <button type="button" data-mode="single" data-for="bot" aria-pressed="true">1 up</button>
-            <button type="button" data-mode="split" data-for="bot" aria-pressed="false">2 up</button>
+      <div class="pair">
+        <article class="tv" data-size="32" data-tv="left">
+          <div class="tv-head">
+            <span class="tv-name" id="leftName">Bottom left <em>&middot; 32&Prime;</em></span>
+            <div class="seg" role="group" id="leftSeg" aria-label="Bottom left TV layout">
+              <button type="button" data-mode="single" data-for="left" aria-pressed="true">1 up</button>
+              <button type="button" data-mode="split" data-for="left" aria-pressed="false">2 up</button>
+            </div>
           </div>
-        </div>
-        <div class="screen" id="screen-bot" data-layout="single"></div>
-      </article>
-      </div>
+          <div class="screen" id="screen-left" data-layout="single"></div>
+        </article>
 
-      <article class="tv laptop" data-size="21" data-tv="lap" id="lapTv" hidden>
-        <div class="tv-head">
-          <span class="tv-name">Laptop <em>&middot; 15&Prime;</em></span>
-        </div>
-        <div class="screen" id="screen-lap" data-layout="single"></div>
-        <div class="deck"><span></span></div>
-        <div class="lap-note">&asymp;21&Prime; at your seat</div>
-      </article>
+        <article class="tv" data-size="32" data-tv="right" id="rightTv">
+          <div class="tv-head">
+            <span class="tv-name" id="rightName">Bottom right <em>&middot; 32&Prime;</em></span>
+            <div class="seg" role="group" id="rightSeg" aria-label="Bottom right TV layout">
+              <button type="button" data-mode="single" data-for="right" aria-pressed="true">1 up</button>
+              <button type="button" data-mode="split" data-for="right" aria-pressed="false">2 up</button>
+            </div>
+          </div>
+          <div class="screen" id="screen-right" data-layout="single"></div>
+        </article>
+      </div>
+      </div>
     </div>
 
     <div class="wall-foot">
-      <div class="tally"><b id="tallyOn">0</b> <span>of</span> <b id="tallyCap">6</b> <span>screens live</span></div>
+      <div class="tally"><b id="tallyOn">0</b> <span>of</span> <b id="tallyCap">7</b> <span>screens live</span></div>
       <div class="acts">
-        <button class="btn" type="button" id="btnLaptop" aria-pressed="false">Add laptop</button>
+        <button class="btn" type="button" id="btnRight" aria-pressed="true">Remove second 32&Prime;</button>
         <button class="btn" type="button" id="btnReset">Reset wall</button>
         <button class="btn primary" type="button" id="btnFill">Auto&#8209;fill</button>
       </div>
@@ -546,17 +543,28 @@ var LS_KEY = "sundaywall.v1.2026";
 var DB_PATH = "plans/2026";
 
 var SLOTS = {
-  top: ["top-1","top-2"],
-  main:["main-1","main-2","main-3","main-4"],
-  bot: ["bot-1","bot-2"],
-  lap: ["lap-1"]
+  top:  ["top-1","top-2"],
+  main: ["main-1","main-2","main-3","main-4"],
+  left: ["left-1","left-2"],
+  right:["right-1","right-2"]
 };
-var SLOT_LABEL = {
-  "top-1":"Top 1","top-2":"Top 2",
-  "main-1":"Main 1","main-2":"Main 2","main-3":"Main 3","main-4":"Main 4",
-  "bot-1":"Bottom 1","bot-2":"Bottom 2",
-  "lap-1":"Laptop"
-};
+/* the bottom pair only says which side it is when both 32s are out */
+function tvName(tv){
+  if(tv === "top") return "Top";
+  if(tv === "main") return "Main";
+  if(tv === "right") return "Bottom right";
+  return plan().right ? "Bottom left" : "Bottom";
+}
+function slotLabel(id){
+  var cut = id.lastIndexOf("-");
+  return tvName(id.slice(0, cut)) + " " + id.slice(cut + 1);
+}
+/* the heading and its layout group both carry the name, so they move together */
+function nameTv(tv, nameId, segId){
+  var name = tvName(tv);
+  document.getElementById(nameId).firstChild.nodeValue = name + " ";
+  document.getElementById(segId).setAttribute("aria-label", name + " TV layout");
+}
 
 /* ---------------- state ---------------- */
 var state = { week:1, slate:"early", plans:{} };
@@ -565,11 +573,37 @@ var db = null, dbDoc = null, lastPushed = "", writeTimer = null;
 
 /* every week and every window opens the same way: RedZone up top, the rest yours to fill */
 function blankPlan(){
-  return { topMode:"single", mainMode:"quad", botMode:"single", slots:{ "top-1":{ k:"rz" } } };
+  return { topMode:"single", mainMode:"quad", leftMode:"single", rightMode:"single",
+           right:true, slots:{ "top-1":{ k:"rz" } } };
+}
+/* Older plans were saved when the bottom was one 40" with an optional laptop, and then a
+   second 40", off to the side. Both of those are the bottom pair of 32s now, so carry the
+   games over rather than drop them: the bottom 40" is the left set, whatever sat beside it
+   is the right one, and a plan that predates the option at all gets the whole pair. */
+function migrate(p){
+  moveKey(p, "botMode", "leftMode");
+  moveKey(p, "sideMode", "rightMode");
+  if("laptop" in p){ p.right = !!p.laptop; delete p.laptop; }
+  if("side" in p){ p.right = !!p.side; delete p.side; }
+  if(p.slots){
+    moveKey(p.slots, "bot-1", "left-1");
+    moveKey(p.slots, "bot-2", "left-2");
+    moveKey(p.slots, "lap-1", "right-1");
+    moveKey(p.slots, "side-1", "right-1");
+    moveKey(p.slots, "side-2", "right-2");
+  }
+  if(!("right" in p)) p.right = true;
+  if(!p.leftMode) p.leftMode = "single";
+  if(!p.rightMode) p.rightMode = "single";
+  return p;
+}
+function moveKey(o, from, to){
+  if(!(from in o)) return;
+  if(!(to in o)) o[to] = o[from];
+  delete o[from];
 }
 /* which slots a TV actually shows in a given layout */
 function slotsFor(tv, mode){
-  if(tv === "lap") return SLOTS.lap;        /* one game, no splitting a 15" panel */
   if(tv === "main") return mode==="single" ? ["main-1"] : mode==="split" ? ["main-1","main-2"] : SLOTS.main;
   return mode==="split" ? SLOTS[tv] : [tv + "-1"];
 }
@@ -579,7 +613,7 @@ function plan(){
   var k = key();
   if(!state.plans[k]) state.plans[k] = blankPlan();
   if(!state.plans[k].mainMode) state.plans[k].mainMode = "quad";
-  return state.plans[k];
+  return migrate(state.plans[k]);
 }
 function weekData(){
   for(var i=0;i<WEEKS.length;i++){ if(WEEKS[i].week===state.week) return WEEKS[i]; }
@@ -604,8 +638,8 @@ function activeSlots(){
   var p = plan();
   var a = slotsFor("top", p.topMode)
     .concat(slotsFor("main", p.mainMode))
-    .concat(slotsFor("bot", p.botMode));
-  return p.laptop ? a.concat(SLOTS.lap) : a;
+    .concat(slotsFor("left", p.leftMode));
+  return p.right ? a.concat(slotsFor("right", p.rightMode)) : a;
 }
 
 /* ---------------- persistence ---------------- */
@@ -697,17 +731,18 @@ function setMode(tv, mode){
   SLOTS[tv].forEach(function(id){ if(keep.indexOf(id) < 0) delete p.slots[id]; });
   save(); render();
 }
-function toggleLaptop(){
+function toggleRight(){
   var p = plan();
-  p.laptop = !p.laptop;
-  if(!p.laptop) delete p.slots["lap-1"];   /* whatever was on it goes back to the rack */
+  p.right = !p.right;
+  /* whatever was on it goes back to the rack */
+  if(!p.right) SLOTS.right.forEach(function(id){ delete p.slots[id]; });
   save(); render();
 }
 function resetWall(){ state.plans[key()] = blankPlan(); save(); render(); }
 function autoFill(){
   var p = plan(), open = activeSlots().filter(function(s){ return !p.slots[s]; });
   if(!open.length) return;
-  var order = SLOTS.main.concat(["top-1","top-2","bot-1","bot-2","lap-1"]).filter(function(s){ return open.indexOf(s)>-1; });
+  var order = SLOTS.main.concat(["top-1","top-2","left-1","left-2","right-1","right-2"]).filter(function(s){ return open.indexOf(s)>-1; });
   var r = rackGames(), pool = r.fixed.concat(r.flex).filter(function(g){ return !findSlotOf({k:"g",id:g.id}); });
   for(var i=0; i<order.length && i<pool.length; i++) p.slots[order[i]] = { k:"g", id:pool[i].id };
   save(); render();
@@ -725,7 +760,7 @@ function setArmed(item){
   var bar = document.getElementById("armed");
   if(!item){ bar.classList.remove("on"); render(); return; }
   var txt = item.k==="rz" ? "NFL RedZone" :
-            item.k==="slot" ? (SLOT_LABEL[item.slot] + " — pick a screen to swap with") :
+            item.k==="slot" ? (slotLabel(item.slot) + " — pick a screen to swap with") :
             label(gameById(item.id));
   document.getElementById("armedTxt").textContent =
     (item.k==="slot" ? txt : "▸ " + txt + " — tap a screen to place it");
@@ -749,22 +784,22 @@ function slotEl(id){
 
   var inner;
   if(!item){
-    el.setAttribute("aria-label", SLOT_LABEL[id] + ", empty");
+    el.setAttribute("aria-label", slotLabel(id) + ", empty");
     inner = '<div class="slot-empty"><span class="plus">+</span><span class="id">' +
-      SLOT_LABEL[id] + '</span></div>';
+      slotLabel(id) + '</span></div>';
   } else if(item.k === "rz"){
     el.classList.add("rz");
-    el.setAttribute("aria-label", SLOT_LABEL[id] + ", NFL RedZone");
+    el.setAttribute("aria-label", slotLabel(id) + ", NFL RedZone");
     inner =
-      '<button class="slot-x" type="button" aria-label="Clear ' + SLOT_LABEL[id] + '">×</button>' +
+      '<button class="slot-x" type="button" aria-label="Clear ' + slotLabel(id) + '">×</button>' +
       '<div class="rz-in"><div class="rz-t">RedZone</div><div class="rz-s">Every touchdown</div></div>';
   } else {
     var g = gameById(item.id);
     if(!g){ delete p.slots[id]; return slotEl(id); }
     var ta = TEAMS[g.away], th = TEAMS[g.home];
-    el.setAttribute("aria-label", SLOT_LABEL[id] + ", " + ta.loc + " " + ta.name + " at " + th.loc + " " + th.name);
+    el.setAttribute("aria-label", slotLabel(id) + ", " + ta.loc + " " + ta.name + " at " + th.loc + " " + th.name);
     inner =
-      '<button class="slot-x" type="button" aria-label="Clear ' + SLOT_LABEL[id] + '">×</button>' +
+      '<button class="slot-x" type="button" aria-label="Clear ' + slotLabel(id) + '">×</button>' +
       '<div class="matchup">' +
         '<div class="side" style="--tc:' + ta.color + '"><span class="abbr">' + g.away + '</span><span class="role">AWAY</span></div>' +
         '<span class="at">@</span>' +
@@ -775,7 +810,7 @@ function slotEl(id){
   }
   if(picked){
     inner += '<div class="slot-cover">' +
-        '<button class="cover-x" type="button" aria-label="Remove from ' + SLOT_LABEL[id] + '">&#10005;</button>' +
+        '<button class="cover-x" type="button" aria-label="Remove from ' + slotLabel(id) + '">&#10005;</button>' +
         '<span class="cover-hint">Remove</span>' +
       '</div>';
   }
@@ -803,7 +838,7 @@ function chipEl(kind, g){
       '<div class="chip-main">' +
         '<div class="chip-teams">NFL RedZone</div>' +
         '<div class="chip-meta"><span class="net">RZ</span><span>Whips around every game</span></div>' +
-      '</div>' + (at ? '<div class="chip-where">' + SLOT_LABEL[at] + '</div>' : '');
+      '</div>' + (at ? '<div class="chip-where">' + slotLabel(at) + '</div>' : '');
   } else {
     var ta = TEAMS[g.away], th = TEAMS[g.home];
     el.setAttribute("data-game", g.id);
@@ -814,7 +849,7 @@ function chipEl(kind, g){
         '<div class="chip-teams">' + ta.name + ' <span class="vs">at</span> ' + th.name + '</div>' +
         '<div class="chip-meta"><span class="net">' + (g.net || "TBD") + '</span>' +
           '<span>' + (g.time || "Window TBD") + '</span><span>' + g.away + ' @ ' + g.home + '</span></div>' +
-      '</div>' + (at ? '<div class="chip-where">' + SLOT_LABEL[at] + '</div>' : '');
+      '</div>' + (at ? '<div class="chip-where">' + slotLabel(at) + '</div>' : '');
   }
   return el;
 }
@@ -844,21 +879,24 @@ function render(){
   }
 
   /* screens */
-  ["top","main","bot"].forEach(function(tv){
+  ["top","main","left"].forEach(function(tv){
     var host = document.getElementById("screen-" + tv), mode = modeOf(tv);
     host.setAttribute("data-layout", mode);
     host.innerHTML = "";
     slotsFor(tv, mode).forEach(function(id){ host.appendChild(slotEl(id)); });
   });
 
-  var lapOn = !!p.laptop, lapHost = document.getElementById("screen-lap");
-  document.getElementById("lapTv").hidden = !lapOn;
-  document.getElementById("wall").classList.toggle("has-lap", lapOn);
-  lapHost.innerHTML = "";
-  if(lapOn) lapHost.appendChild(slotEl("lap-1"));
-  var lapBtn = document.getElementById("btnLaptop");
-  lapBtn.textContent = lapOn ? "Remove laptop" : "Add laptop";
-  lapBtn.setAttribute("aria-pressed", String(lapOn));
+  /* the right 32" only exists when it is out, and the left one is just "Bottom" without it */
+  var bothOut = !!p.right, rightHost = document.getElementById("screen-right"), rightMode = modeOf("right");
+  document.getElementById("rightTv").hidden = !bothOut;
+  rightHost.setAttribute("data-layout", rightMode);
+  rightHost.innerHTML = "";
+  if(bothOut) slotsFor("right", rightMode).forEach(function(id){ rightHost.appendChild(slotEl(id)); });
+  nameTv("left", "leftName", "leftSeg");
+  nameTv("right", "rightName", "rightSeg");
+  var rightBtn = document.getElementById("btnRight");
+  rightBtn.textContent = bothOut ? "Remove second 32\u2033" : "Add second 32\u2033";
+  rightBtn.setAttribute("aria-pressed", String(bothOut));
 
   /* tally */
   var act = activeSlots(), on = 0;
@@ -1143,7 +1181,7 @@ document.addEventListener("keydown", function(e){
 /* ---------------- controls ---------------- */
 document.getElementById("armedX").addEventListener("click", function(){ setArmed(null); });
 document.getElementById("btnReset").addEventListener("click", resetWall);
-document.getElementById("btnLaptop").addEventListener("click", toggleLaptop);
+document.getElementById("btnRight").addEventListener("click", toggleRight);
 document.getElementById("btnFill").addEventListener("click", autoFill);
 document.getElementById("wkPrev").addEventListener("click", function(){ if(state.week>1){ state.week--; setArmed(null); render(); } });
 document.getElementById("wkNext").addEventListener("click", function(){ if(state.week<18){ state.week++; setArmed(null); render(); } });

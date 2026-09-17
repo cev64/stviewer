@@ -1,8 +1,8 @@
 # Sunday Wall
 
-A drag-and-drop planner for the NFL Sunday TV wall — three screens stacked on one
-mount, planned separately for the 1:00 ET and 4:00 ET windows of every week of the
-2026 regular season.
+A drag-and-drop planner for the NFL Sunday TV wall — a 40″ over a 65″ over a pair
+of 32s, all on one mount, planned separately for the 1:00 ET and 4:00 ET windows of
+every week of the 2026 regular season.
 
 Open `index.html` in a browser. No build step, no server, no dependencies.
 
@@ -12,17 +12,22 @@ Open `index.html` in a browser. No build step, no server, no dependencies.
 | --- | --- |
 | Top 40″ | 1 up, or 2 up |
 | Main 65″ | 1 up, 2 up, or quad box |
-| Bottom 40″ | 1 up, or 2 up |
-| Laptop | 1 up (off by default) |
+| Bottom left 32″ | 1 up, or 2 up |
+| Bottom right 32″ | 1 up, or 2 up (can be taken out) |
 
-Three to nine streams depending on how the sets are split. The laptop is added
-per window with **Add laptop** and sits on the table to the right of the mount;
-removing it returns its game to the rack. Its panel is 15″, but it is drawn at
-21″ because it sits closer than the TVs, so the wall shows how big it actually
-looks from the couch. Panel widths across the whole room are true to their
-diagonals — a 40″ is 61.54% the width of the 65″, the laptop 32.31%. NFL RedZone sits at
-the top of the rack and can take any of those slots in either window. Dropping to
-a smaller layout sends the games on the screens it loses back to the rack.
+The two 32s hang side by side under the 65″, centred on it. Both are on the wall
+to start; **Remove second 32″** drops the window to a single 32″, which then
+centres on the mount by itself, and its games go back to the rack. That choice is saved
+per window like everything else, and the heading reads *Bottom* rather than
+*Bottom left* whenever it is on its own.
+
+Three to ten streams depending on how the sets are split. Panel widths across
+the whole room are true to their diagonals — a 40″ is 61.54% the width of the
+65″, a 32″ 49.23%. Two 32s side by side are 98.46% of a 65″ in glass alone, so
+the pair spans almost exactly the panel above it and the 1.54% left over is the
+gap between them. NFL RedZone sits at the top of the rack and can take any of
+those slots in either window. Dropping to a smaller layout sends the games on
+the screens it loses back to the rack.
 
 ### Pictures are drawn at true size
 
