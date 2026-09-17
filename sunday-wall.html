@@ -136,15 +136,15 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 
 /* ---------- the wall ---------- */
 /* One scale runs the whole room: every panel's width is its diagonal against the 65".
-   With the laptop out, the pair has to share the column, so the base shrinks to fit. */
+   With the side 40" out, the pair has to share the column, so the base shrinks to fit. */
 .wall{
   --gap:26px;
   --w65:min(760px, 100%);
   position:relative; display:flex; align-items:flex-end; justify-content:center; gap:var(--gap);
 }
-.wall.has-lap{ --w65:min(760px, calc((100% - var(--gap)) / 1.323)); }
+.wall.has-side{ --w65:min(760px, calc((100% - var(--gap)) / 1.6154)); }
 @media (max-width:700px){
-  .wall, .wall.has-lap{ flex-direction:column; align-items:center; --w65:min(760px,100%); }
+  .wall, .wall.has-side{ flex-direction:column; align-items:center; --w65:min(760px,100%); }
 }
 .stack{
   position:relative; width:var(--w65); min-width:0;
@@ -157,24 +157,19 @@ button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
 .tv{position:relative; z-index:1; width:var(--w); max-width:100%}
 .tv[data-size="65"]{--w:100%}                        /* the stack IS the 65" width */
 .tv[data-size="40"]{--w:61.54%}                     /* 40 / 65 */
-.tv[data-size="21"]{--w:calc(var(--w65) * .3231)}   /* 21 / 65, measured off the wall */
+/* the side set stands beside the stack, not in it, so its 40 / 65 is measured off the 65" */
+.tv[data-tv="side"][data-size="40"]{--w:calc(var(--w65) * .6154)}
 
-/* the laptop sits on the table, not on the mount, so it gets a lid and a deck */
-.laptop .screen{border-radius:5px 5px 2px 2px}
-.laptop .deck{
-  position:relative; height:9px; margin:2px 0 0;
+/* the side 40" stands on the table beside the mount, so it gets a pedestal */
+.tv .stand{position:relative; height:12px; margin:3px auto 0; width:30%}
+.tv .stand::before{   /* neck */
+  content:""; position:absolute; left:50%; top:0; width:13%; height:8px; margin-left:-6.5%;
   background:linear-gradient(180deg, var(--line), var(--line-soft));
-  clip-path:polygon(0 0, 100% 0, 99% 100%, 1% 100%);
-  border-radius:0 0 4px 4px;
 }
-.laptop .deck span{
-  position:absolute; left:50%; bottom:0; width:16%; height:3px; margin-left:-8%;
-  background:var(--sunk); border-radius:2px 2px 0 0;
-}
-.lap-note{
-  margin-top:7px; text-align:center;
-  font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.11em;
-  text-transform:uppercase; color:var(--muted);
+.tv .stand::after{    /* foot */
+  content:""; position:absolute; left:0; bottom:0; width:100%; height:4px;
+  background:linear-gradient(180deg, var(--line-soft), var(--sunk));
+  border-radius:3px;
 }
 
 .tv-head{
@@ -488,20 +483,23 @@ body.dragging-now .chip, body.dragging-now .slot{cursor:grabbing}
       </article>
       </div>
 
-      <article class="tv laptop" data-size="21" data-tv="lap" id="lapTv" hidden>
+      <article class="tv" data-size="40" data-tv="side" id="sideTv" hidden>
         <div class="tv-head">
-          <span class="tv-name">Laptop <em>&middot; 15&Prime;</em></span>
+          <span class="tv-name">Side <em>&middot; 40&Prime;</em></span>
+          <div class="seg" role="group" aria-label="Side TV layout">
+            <button type="button" data-mode="single" data-for="side" aria-pressed="true">1 up</button>
+            <button type="button" data-mode="split" data-for="side" aria-pressed="false">2 up</button>
+          </div>
         </div>
-        <div class="screen" id="screen-lap" data-layout="single"></div>
-        <div class="deck"><span></span></div>
-        <div class="lap-note">&asymp;21&Prime; at your seat</div>
+        <div class="screen" id="screen-side" data-layout="single"></div>
+        <div class="stand"></div>
       </article>
     </div>
 
     <div class="wall-foot">
       <div class="tally"><b id="tallyOn">0</b> <span>of</span> <b id="tallyCap">6</b> <span>screens live</span></div>
       <div class="acts">
-        <button class="btn" type="button" id="btnLaptop" aria-pressed="false">Add laptop</button>
+        <button class="btn" type="button" id="btnSide" aria-pressed="false">Add side TV</button>
         <button class="btn" type="button" id="btnReset">Reset wall</button>
         <button class="btn primary" type="button" id="btnFill">Auto&#8209;fill</button>
       </div>
@@ -540,13 +538,13 @@ var SLOTS = {
   top: ["top-1","top-2"],
   main:["main-1","main-2","main-3","main-4"],
   bot: ["bot-1","bot-2"],
-  lap: ["lap-1"]
+  side:["side-1","side-2"]
 };
 var SLOT_LABEL = {
   "top-1":"Top 1","top-2":"Top 2",
   "main-1":"Main 1","main-2":"Main 2","main-3":"Main 3","main-4":"Main 4",
   "bot-1":"Bottom 1","bot-2":"Bottom 2",
-  "lap-1":"Laptop"
+  "side-1":"Side 1","side-2":"Side 2"
 };
 
 /* ---------------- state ---------------- */
@@ -556,11 +554,17 @@ var db = null, dbDoc = null, lastPushed = "", writeTimer = null;
 
 /* every week and every window opens the same way: RedZone up top, the rest yours to fill */
 function blankPlan(){
-  return { topMode:"single", mainMode:"quad", botMode:"single", slots:{ "top-1":{ k:"rz" } } };
+  return { topMode:"single", mainMode:"quad", botMode:"single", sideMode:"single", slots:{ "top-1":{ k:"rz" } } };
+}
+/* plans saved when the fourth screen was a laptop: it is a 40" now, on the same slot */
+function migrate(p){
+  if("laptop" in p){ p.side = !!p.laptop; delete p.laptop; }
+  if(p.slots && p.slots["lap-1"]){ p.slots["side-1"] = p.slots["lap-1"]; delete p.slots["lap-1"]; }
+  if(!p.sideMode) p.sideMode = "single";
+  return p;
 }
 /* which slots a TV actually shows in a given layout */
 function slotsFor(tv, mode){
-  if(tv === "lap") return SLOTS.lap;        /* one game, no splitting a 15" panel */
   if(tv === "main") return mode==="single" ? ["main-1"] : mode==="split" ? ["main-1","main-2"] : SLOTS.main;
   return mode==="split" ? SLOTS[tv] : [tv + "-1"];
 }
@@ -570,7 +574,7 @@ function plan(){
   var k = key();
   if(!state.plans[k]) state.plans[k] = blankPlan();
   if(!state.plans[k].mainMode) state.plans[k].mainMode = "quad";
-  return state.plans[k];
+  return migrate(state.plans[k]);
 }
 function weekData(){
   for(var i=0;i<WEEKS.length;i++){ if(WEEKS[i].week===state.week) return WEEKS[i]; }
@@ -596,7 +600,7 @@ function activeSlots(){
   var a = slotsFor("top", p.topMode)
     .concat(slotsFor("main", p.mainMode))
     .concat(slotsFor("bot", p.botMode));
-  return p.laptop ? a.concat(SLOTS.lap) : a;
+  return p.side ? a.concat(slotsFor("side", p.sideMode)) : a;
 }
 
 /* ---------------- persistence ---------------- */
@@ -688,17 +692,18 @@ function setMode(tv, mode){
   SLOTS[tv].forEach(function(id){ if(keep.indexOf(id) < 0) delete p.slots[id]; });
   save(); render();
 }
-function toggleLaptop(){
+function toggleSide(){
   var p = plan();
-  p.laptop = !p.laptop;
-  if(!p.laptop) delete p.slots["lap-1"];   /* whatever was on it goes back to the rack */
+  p.side = !p.side;
+  /* whatever was on it goes back to the rack */
+  if(!p.side) SLOTS.side.forEach(function(id){ delete p.slots[id]; });
   save(); render();
 }
 function resetWall(){ state.plans[key()] = blankPlan(); save(); render(); }
 function autoFill(){
   var p = plan(), open = activeSlots().filter(function(s){ return !p.slots[s]; });
   if(!open.length) return;
-  var order = SLOTS.main.concat(["top-1","top-2","bot-1","bot-2","lap-1"]).filter(function(s){ return open.indexOf(s)>-1; });
+  var order = SLOTS.main.concat(["top-1","top-2","bot-1","bot-2","side-1","side-2"]).filter(function(s){ return open.indexOf(s)>-1; });
   var r = rackGames(), pool = r.fixed.concat(r.flex).filter(function(g){ return !findSlotOf({k:"g",id:g.id}); });
   for(var i=0; i<order.length && i<pool.length; i++) p.slots[order[i]] = { k:"g", id:pool[i].id };
   save(); render();
@@ -842,14 +847,15 @@ function render(){
     slotsFor(tv, mode).forEach(function(id){ host.appendChild(slotEl(id)); });
   });
 
-  var lapOn = !!p.laptop, lapHost = document.getElementById("screen-lap");
-  document.getElementById("lapTv").hidden = !lapOn;
-  document.getElementById("wall").classList.toggle("has-lap", lapOn);
-  lapHost.innerHTML = "";
-  if(lapOn) lapHost.appendChild(slotEl("lap-1"));
-  var lapBtn = document.getElementById("btnLaptop");
-  lapBtn.textContent = lapOn ? "Remove laptop" : "Add laptop";
-  lapBtn.setAttribute("aria-pressed", String(lapOn));
+  var sideOn = !!p.side, sideHost = document.getElementById("screen-side"), sideMode = modeOf("side");
+  document.getElementById("sideTv").hidden = !sideOn;
+  document.getElementById("wall").classList.toggle("has-side", sideOn);
+  sideHost.setAttribute("data-layout", sideMode);
+  sideHost.innerHTML = "";
+  if(sideOn) slotsFor("side", sideMode).forEach(function(id){ sideHost.appendChild(slotEl(id)); });
+  var sideBtn = document.getElementById("btnSide");
+  sideBtn.textContent = sideOn ? "Remove side TV" : "Add side TV";
+  sideBtn.setAttribute("aria-pressed", String(sideOn));
 
   /* tally */
   var act = activeSlots(), on = 0;
@@ -1134,7 +1140,7 @@ document.addEventListener("keydown", function(e){
 /* ---------------- controls ---------------- */
 document.getElementById("armedX").addEventListener("click", function(){ setArmed(null); });
 document.getElementById("btnReset").addEventListener("click", resetWall);
-document.getElementById("btnLaptop").addEventListener("click", toggleLaptop);
+document.getElementById("btnSide").addEventListener("click", toggleSide);
 document.getElementById("btnFill").addEventListener("click", autoFill);
 document.getElementById("wkPrev").addEventListener("click", function(){ if(state.week>1){ state.week--; setArmed(null); render(); } });
 document.getElementById("wkNext").addEventListener("click", function(){ if(state.week<18){ state.week++; setArmed(null); render(); } });

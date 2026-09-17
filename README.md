@@ -13,16 +13,15 @@ Open `index.html` in a browser. No build step, no server, no dependencies.
 | Top 40″ | 1 up, or 2 up |
 | Main 65″ | 1 up, 2 up, or quad box |
 | Bottom 40″ | 1 up, or 2 up |
-| Laptop | 1 up (off by default) |
+| Side 40″ | 1 up, or 2 up (off by default) |
 
-Three to nine streams depending on how the sets are split. The laptop is added
-per window with **Add laptop** and sits on the table to the right of the mount;
-removing it returns its game to the rack. Its panel is 15″, but it is drawn at
-21″ because it sits closer than the TVs, so the wall shows how big it actually
-looks from the couch. Panel widths across the whole room are true to their
-diagonals — a 40″ is 61.54% the width of the 65″, the laptop 32.31%. NFL RedZone sits at
-the top of the rack and can take any of those slots in either window. Dropping to
-a smaller layout sends the games on the screens it loses back to the rack.
+Three to ten streams depending on how the sets are split. The side 40″ is added
+per window with **Add side TV** and stands on the table to the right of the
+mount; removing it returns its games to the rack. Panel widths across the whole
+room are true to their diagonals — a 40″ is 61.54% the width of the 65″, on the
+mount or beside it. NFL RedZone sits at the top of the rack and can take any of
+those slots in either window. Dropping to a smaller layout sends the games on
+the screens it loses back to the rack.
 
 ### Pictures are drawn at true size
 
