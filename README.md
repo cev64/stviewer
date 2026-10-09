@@ -74,9 +74,19 @@ windows: four in Week 16, four in Week 17, and all sixteen in Week 18, which the
 NFL schedules only after Week 17 finishes. Networks shown are the producing
 broadcast; Sunday Ticket carries every game listed.
 
-To refresh the data after the league moves games, re-run the extraction against
+The league moves games during the season (flexes, and windows set late), so the
+data is refreshed every Tuesday by running:
+
+    python3 scripts/update_schedule.py           # rewrite both pages, list what moved
+    python3 scripts/update_schedule.py --check   # list what moved, write nothing
+
+It pulls all 18 weeks from
 `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=2026&seasontype=2&week=N`
-and replace the JSON in the `#sked` script tag.
+and replaces the JSON in the `#sked` script tag of `index.html` and
+`sunday-wall.html`. It exits 0 when nothing moved, 1 when the schedule changed,
+and 2 when ESPN could not be reached. A game already on a saved wall that the
+league moves to the other window goes back to the rack, and shows up in the
+right window's rack.
 
 ## Files
 
